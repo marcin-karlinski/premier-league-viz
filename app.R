@@ -10,20 +10,52 @@ stats_shooting <- fb_big5_advanced_season_stats(season_end_year = "2023", stat_t
 stats <- fb_big5_advanced_season_stats(season_end_year= "2023", stat_type= "standard", team_or_player = "team") %>% 
   filter(Comp == "Premier League")
 
-ui <- fluidPage(
-  fluidRow(highchartOutput("hc1"))
-)
-
-server <- function(input, output, session) {
-  output$hc1 <- renderHighchart({
-    stats %>% 
-      arrange(-`npxG_Per`) %>% 
-      hchart(
-      'bar', hcaes(x = Squad, y = `npxG_Per`),
-      color = "#0073C2FF"
+shiny::shinyApp(
+  ui = tablerDashPage(
+    navbar = tablerDashNav(
+      id = "my_menu",
+      src = "https://supersport-cms-prod.azureedge.net/media/icxfej42/premier-league.png?width=500",
+      navMenu = tablerNavMenu(
+        tablerNavMenuItem(
+          "Teams",
+          tabName = "Teams",
+          icon = "flag"
+          ),
+        tablerNavMenuItem(
+          "Players",
+          tabName = "Players",
+          icon = "users"
+        )
+      )
+    ),
+    footer = tablerDashFooter(),
+    title = "test",
+    enable_preloader = TRUE,
+    body = tablerDashBody(
+      tablerTabItems(
+        tablerTabItem(
+          tabName = "Teams",
+          fluidRow(highchartOutput("hc1"))
+          ),
+        tablerTabItem(
+          tabName = "Players",
+          textOutput("Test2")
+        )
+      )
     )
-      
-  })
-}
-
-shinyApp(ui, server)
+  ),
+  server = function(input, output) {
+    
+    output$hc1 <- renderHighchart({
+      stats %>% 
+        arrange(-`npxG_Per`) %>% 
+        hchart(
+          'bar', hcaes(x = Squad, y = `npxG_Per`),
+          color = "#0073C2FF"
+        )
+    })
+    
+    output$Test2 <- renderText("sdasd")
+  }
+  
+)
