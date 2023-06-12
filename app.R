@@ -105,19 +105,20 @@ shiny::shinyApp(
           team <- epl_matchday_1to38_table[index,]$squad
           my_data <- epl_matchday_1to38_table[epl_matchday_1to38_table$squad == team,]
           
-          results <- pl_2022[pl_2022$Home == premier_league_table[index,]$Squad | pl_2022$Away == premier_league_table[index,]$Squad, ]
-          
-          my_data <- my_data %>%
-            left_join(results, by = c("matchday" = "Wk"))
-          
-          hchart(my_data, "line", hcaes(x = p, y = rk), tooltip = list(pointFormat = "{point.Home} {point.HomeGoals} : {point.AwayGoals} {point.Away} ")) %>% 
+          hchart(my_data, "line", hcaes(x = p, y = rk), 
+                 shadow = TRUE) %>% 
             hc_size(height = 250) %>% 
-            hc_yAxis(reversed = TRUE, max = 20, min = 1)
-            # hc_add_series(
-              # type="point", 
-              # hcaes(x = p, y = -rk)
-              # tooltip = list(pointFormat = "tooltip with 2 values {point.animal}: {point.hours}")
-            # )
+            hc_yAxis(title = list(text = "Position"),
+                     reversed = TRUE, max = 20, min = 1,
+                     tickPositions = c(1, 5, 10, 15, 20)) %>% 
+            hc_xAxis(title = list(text = "Matchweek"),
+                     tickPositions = c(1:38)) %>% 
+            hc_add_series(
+            my_data,
+            type="point",
+            hcaes(x = p, y = rk, group = Result), color = c("#76766f", "#d81920", "#13cf00"),
+            tooltip = list(pointFormat = "{point.Round}<br>{point.squad} {point.GF} : {point.GA} {point.Opponent} ")
+            )
         },
         defaultColDef = colDef(
           maxWidth = 73,
