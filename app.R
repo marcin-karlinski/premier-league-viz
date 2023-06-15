@@ -6,11 +6,19 @@ library(tablerDash)
 library(reactable)
 library(sparkline)
 
-stats_shooting <- readRDS("./data/stats_shooting.rds")
-stats <- readRDS("./data/stats.rds")
 premier_league_table <- readRDS("./data/premier_league_table.rds")
-epl_matchday_1to38_table <- readRDS("epl_matchday_1to38_table.rds")
-pl_2022 <- readRDS("eng_matchweek_detailed.rds")
+
+epl_matchday_1to38_table <- readRDS("./data/epl_matchday_1to38_table.rds")
+
+# pl_2022 <- readRDS("./data/eng_matchweek_detailed.rds")
+
+prem_2023_player_shooting <- readRDS("./data/prem_2023_player_shooting.rds") %>% 
+  select(Player, Squad, xG = xG_Expected, npxG = npxG_Expected, Goals = Gls_Standard)
+
+prem_2023_player_passing <- readRDS("./data/prem_2023_player_passing.rds") %>% 
+  select(Player, Squad, `Key passes` = KP, xA, Assists = Ast)
+
+cumulative_goals <- readRDS("./data/cumulative_goals.rds")
 
 premier_league_table <- premier_league_table %>% 
   select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
@@ -48,22 +56,34 @@ shiny::shinyApp(
           tablerCard(
             width = 12,
             title = "Standings",
-            reactableOutput("PL_main_table"),
+            reactableOutput("rct_main_table"),
             status = "success",
             statusSide = "left",
             collapsible = FALSE,
             zoomable = FALSE,
             closable = FALSE
           ),
-          tablerCard(
-            width = 12,
-            title = "Card",
-            highchartOutput("hc_test"),
-            status = "success",
-            statusSide = "left",
-            collapsible = FALSE,
-            zoomable = FALSE,
-            closable = FALSE
+          fluidRow(
+            tablerCard(
+              width = 6,
+              title = "Top scorers",
+              reactableOutput("rct_top_scorers"),
+              status = "success",
+              statusSide = "left",
+              collapsible = FALSE,
+              zoomable = FALSE,
+              closable = FALSE
+            ),
+            tablerCard(
+              width = 6,
+              title = "Top playmakers",
+              reactableOutput("rct_top_assisters"),
+              status = "success",
+              statusSide = "left",
+              collapsible = FALSE,
+              zoomable = FALSE,
+              closable = FALSE
+            )
           )
         ),
         tablerTabItem(
@@ -81,7 +101,16 @@ shiny::shinyApp(
           ),
         tablerTabItem(
           tabName = "Players",
-          textOutput("Test2")
+          tablerCard(
+            width = 12,
+            title = "Goals by gameweek",
+            highchartOutput("hc_goals_by_gw"),
+            status = "success",
+            statusSide = "left",
+            collapsible = FALSE,
+            zoomable = FALSE,
+            closable = FALSE
+          )
         )
       )
     )
@@ -89,7 +118,7 @@ shiny::shinyApp(
   server = function(input, output) {
   
     
-    output$PL_main_table <- renderReactable({
+    output$rct_main_table <- renderReactable({
       
       reactable(
         premier_league_table,
@@ -183,6 +212,105 @@ shiny::shinyApp(
       
     })
     
+    output$rct_top_scorers <- renderReactable({
+      
+      top_scorers_data <- prem_2023_player_shooting %>% arrange(-Goals) %>% slice(1:8)
+      
+      reactable(
+        top_scorers_data,
+        showPageInfo = FALSE,
+        pagination = FALSE,
+        showPageSizeOptions = FALSE,
+        defaultPageSize = 20,
+        showSortable = TRUE,
+        sortable = TRUE,
+        defaultColDef = colDef(
+          maxWidth = 80,
+          class = JS("function(rowInfo, column, state) {
+                    // Highlight sorted columns
+                    for (let i = 0; i < state.sorted.length; i++) {
+                      if (state.sorted[i].id === column.id) {
+                        return 'sorted'
+                      }
+                    }
+                  }")
+        ),
+        columns = list(
+          Player = colDef(
+            maxWidth = 250,
+            cell = function(value, index) {
+              team <- top_scorers_data[index,]$Squad
+              img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
+              image <- img(src = img_src, style = "height: 24px;", alt = team)
+              tagList(
+                div(style = "display: inline-block; 
+                             margin-left: 0.5rem;
+                             font-size: 1.125rem;
+                             font-weight: 700;
+                             width: 45px", image),
+                value
+              )
+            }
+          ),
+          Squad = colDef(show = FALSE),
+          Goals = colDef(
+            style = list(fontWeight = "bold")
+          )
+        )
+      )
+      
+    })
+    
+    output$rct_top_assisters <- renderReactable({
+      
+      top_assisters_data <- prem_2023_player_passing %>% arrange(-Assists) %>% slice(1:8)
+      
+      reactable(
+        top_assisters_data,
+        showPageInfo = FALSE,
+        pagination = FALSE,
+        showPageSizeOptions = FALSE,
+        defaultPageSize = 20,
+        showSortable = TRUE,
+        sortable = TRUE,
+        defaultColDef = colDef(
+          maxWidth = 80,
+          class = JS("function(rowInfo, column, state) {
+                    // Highlight sorted columns
+                    for (let i = 0; i < state.sorted.length; i++) {
+                      if (state.sorted[i].id === column.id) {
+                        return 'sorted'
+                      }
+                    }
+                  }")
+        ),
+        columns = list(
+          Player = colDef(
+            maxWidth = 250,
+            cell = function(value, index) {
+              team <- top_assisters_data[index,]$Squad
+              img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
+              image <- img(src = img_src, style = "height: 24px;", alt = team)
+              tagList(
+                div(style = "display: inline-block; 
+                             margin-left: 0.5rem;
+                             font-size: 1.125rem;
+                             font-weight: 700;
+                             width: 45px", image),
+                value
+              )
+            }
+          ),
+          Squad = colDef(show = FALSE),
+          `Key passes` = colDef(maxWidth = 100),
+          Assists = colDef(
+            style = list(fontWeight = "bold")
+          )
+        )
+      )
+      
+    })
+    
     output$hc_test <- renderHighchart({
       stats %>% 
         arrange(-`npxG_Per`) %>% 
@@ -193,7 +321,13 @@ shiny::shinyApp(
         hc_size(height = 250)
     })
     
-    output$Test2 <- renderText("sdasd")
-  }
+    output$hc_goals_by_gw <- renderHighchart({
+      hchart(cumulative_goals, 
+             "line", 
+             hcaes(x = Round, y = cumulative_goals, group = Scorer)) %>% 
+             hc_xAxis(title = list(text = "Matchweek"),
+                      tickPositions = c(1:39)) 
+    
+  })
   
-)
+})
