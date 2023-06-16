@@ -5,8 +5,11 @@ library(highcharter)
 library(tablerDash)
 library(reactable)
 library(sparkline)
+library(bslib)
+library(shinythemes)
 
-premier_league_table <- readRDS("./data/premier_league_table.rds")
+premier_league_table <- readRDS("./data/premier_league_table.rds") %>% 
+  select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
 
 epl_matchday_1to38_table <- readRDS("./data/epl_matchday_1to38_table.rds")
 
@@ -19,101 +22,48 @@ prem_2023_player_passing <- readRDS("./data/prem_2023_player_passing.rds") %>%
   select(Player, Squad, `Key passes` = KP, xA, Assists = Ast)
 
 cumulative_goals <- readRDS("./data/cumulative_goals.rds")
-
-premier_league_table <- premier_league_table %>% 
-  select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
+cumulative_xG <- readRDS("./data/cumulative_xG.rds")
+cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 
 shiny::shinyApp(
-  ui = tablerDashPage(
-    navbar = tablerDashNav(
-      id = "my_menu",
-      src = "https://supersport-cms-prod.azureedge.net/media/icxfej42/premier-league.png?width=500",
-      navMenu = tablerNavMenu(
-        tablerNavMenuItem(
-          "Overview",
-          tabName = "Overview",
-          icon = "flag"
-        ),
-        tablerNavMenuItem(
-          "Teams",
-          tabName = "Teams",
-          icon = "flag"
-          ),
-        tablerNavMenuItem(
-          "Players",
-          tabName = "Players",
-          icon = "users"
-        )
-      )
-    ),
-    footer = tablerDashFooter(),
-    title = "test",
-    enable_preloader = TRUE,
-    body = tablerDashBody(
-      tablerTabItems(
-        tablerTabItem(
-          tabName = "Overview",
-          tablerCard(
-            width = 12,
-            title = "Standings",
-            reactableOutput("rct_main_table"),
-            status = "success",
-            statusSide = "left",
-            collapsible = FALSE,
-            zoomable = FALSE,
-            closable = FALSE
-          ),
-          fluidRow(
-            tablerCard(
-              width = 6,
-              title = "Top scorers",
-              reactableOutput("rct_top_scorers"),
-              status = "success",
-              statusSide = "left",
-              collapsible = FALSE,
-              zoomable = FALSE,
-              closable = FALSE
-            ),
-            tablerCard(
-              width = 6,
-              title = "Top playmakers",
-              reactableOutput("rct_top_assisters"),
-              status = "success",
-              statusSide = "left",
-              collapsible = FALSE,
-              zoomable = FALSE,
-              closable = FALSE
-            )
-          )
-        ),
-        tablerTabItem(
-          tabName = "Teams",
-          tablerCard(
-            width = 12,
-            title = "Card",
-            highchartOutput("hc_test2"),
-            status = "success",
-            statusSide = "left",
-            collapsible = FALSE,
-            zoomable = FALSE,
-            closable = FALSE
-            )
-          ),
-        tablerTabItem(
-          tabName = "Players",
-          tablerCard(
-            width = 12,
-            title = "Goals by gameweek",
-            highchartOutput("hc_goals_by_gw"),
-            status = "success",
-            statusSide = "left",
-            collapsible = FALSE,
-            zoomable = FALSE,
-            closable = FALSE
-          )
-        )
-      )
-    )
+  ui = page_navbar(
+    title = "Premier League Viz",
+    theme = bs_theme(version = 5, bootswatch = "pulse"),
+    # theme = shinytheme("spacelab"),
+    tabPanel("panel 1", 
+             fluidRow(
+              column(12,
+               card(
+                 max_height = 200,
+                 # full_screen = TRUE,
+                 card_header("Standings"),
+                 reactableOutput("rct_main_table")
+               )
+              )
+                          ),
+              fluidRow(
+                column(6,
+                       card(
+                         max_height = 200,
+                         # full_screen = TRUE,
+                         card_header("A dynamically rendered plot"),
+                         reactableOutput("rct_top_scorers")
+                       )
+                       ),
+                column(6,
+                       card(
+                         max_height = 200,
+                         # full_screen = TRUE,
+                         card_header("A dynamically rendered plot"),
+                         reactableOutput("rct_top_assisters")
+                          )
+                        )
+                      )
+             ),
+    tabPanel("panel 2", 
+             highchartOutput("hc_goals_by_gw")),
+    tabPanel("panel 3", "three")
+      # src = "https://supersport-cms-prod.azureedge.net/media/icxfej42/premier-league.png?width=500",
   ),
   server = function(input, output) {
   
@@ -150,7 +100,7 @@ shiny::shinyApp(
             )
         },
         defaultColDef = colDef(
-          maxWidth = 73,
+          # maxWidth = 73,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -163,7 +113,7 @@ shiny::shinyApp(
         columns = list(
           Rk = colDef(
             name = "P.",
-            maxWidth = 40,
+            # maxWidth = 40,
             align = "center",
             style = function(value) {
               value <- as.numeric(value)
@@ -190,7 +140,7 @@ shiny::shinyApp(
           ),
           Squad = colDef(
             name = "Team",
-            maxWidth = 250,
+            # maxWidth = 250,
             cell = function(value) {
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", value))
               image <- img(src = img_src, style = "height: 24px;", alt = value)
@@ -225,7 +175,7 @@ shiny::shinyApp(
         showSortable = TRUE,
         sortable = TRUE,
         defaultColDef = colDef(
-          maxWidth = 80,
+          # maxWidth = 80,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -237,7 +187,7 @@ shiny::shinyApp(
         ),
         columns = list(
           Player = colDef(
-            maxWidth = 250,
+            # maxWidth = 250,
             cell = function(value, index) {
               team <- top_scorers_data[index,]$Squad
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
@@ -274,7 +224,7 @@ shiny::shinyApp(
         showSortable = TRUE,
         sortable = TRUE,
         defaultColDef = colDef(
-          maxWidth = 80,
+          # maxWidth = 80,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -286,7 +236,7 @@ shiny::shinyApp(
         ),
         columns = list(
           Player = colDef(
-            maxWidth = 250,
+            # maxWidth = 250,
             cell = function(value, index) {
               team <- top_assisters_data[index,]$Squad
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
@@ -302,7 +252,7 @@ shiny::shinyApp(
             }
           ),
           Squad = colDef(show = FALSE),
-          `Key passes` = colDef(maxWidth = 100),
+          # `Key passes` = colDef(maxWidth = 100),
           Assists = colDef(
             style = list(fontWeight = "bold")
           )
