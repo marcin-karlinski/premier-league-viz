@@ -168,7 +168,7 @@ cumulative_xG$xG[is.na(cumulative_xG$xG)] <- 0
 cumulative_xG <- cumulative_xG[order(cumulative_xG$Player, cumulative_xG$cumulative_minute), ]
 cumulative_xG$cumulative_xG <- ave(cumulative_xG$xG, cumulative_xG$Player, FUN = cumsum, na.rm = TRUE)
 
-saveRDS(cumulative_xG, "cumulative_xG.rds")
+saveRDS(cumulative_xG, "./data/cumulative_xG.rds")
 
 
 #The same but for non-pen xG
@@ -212,4 +212,4 @@ cumulative_npxG <- cumulative_npxG[order(cumulative_npxG$Player, cumulative_npxG
 cumulative_npxG$cumulative_npxG <- ave(cumulative_npxG$xG, cumulative_npxG$Player, FUN = cumsum, na.rm = TRUE)
 print(cumulative_npxG)
 
-saveRDS(cumulative_npxG, "cumulative_npxG.rds")
+saveRDS(cumulative_npxG, "./data/cumulative_npxG.rds")
