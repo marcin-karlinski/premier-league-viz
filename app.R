@@ -2,11 +2,12 @@ library(shiny)
 library(worldfootballR)
 library(tidyverse)
 library(highcharter)
-library(tablerDash)
 library(reactable)
 library(sparkline)
 library(bslib)
 library(shinythemes)
+library(shinyWidgets)
+library(htmltools)
 
 premier_league_table <- readRDS("./data/premier_league_table.rds") %>% 
   select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
@@ -16,54 +17,78 @@ epl_matchday_1to38_table <- readRDS("./data/epl_matchday_1to38_table.rds")
 # pl_2022 <- readRDS("./data/eng_matchweek_detailed.rds")
 
 prem_2023_player_shooting <- readRDS("./data/prem_2023_player_shooting.rds") %>% 
-  select(Player, Squad, xG = xG_Expected, npxG = npxG_Expected, Goals = Gls_Standard)
+  select(Player, Squad, Goals = Gls_Standard, xG = xG_Expected, npxG = npxG_Expected)
 
 prem_2023_player_passing <- readRDS("./data/prem_2023_player_passing.rds") %>% 
-  select(Player, Squad, `Key passes` = KP, xA, Assists = Ast)
+  select(Player, Squad, Assists = Ast, `Key passes` = KP, xA)
 
 cumulative_goals <- readRDS("./data/cumulative_goals.rds")
 cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 
+bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
+  bar <- div(style = list(background = fill, width = width, height = height))
+  chart <- div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
+  div(style = list(display = "flex", alignItems = "center", fontWeight = "bold"), label, chart)
+}
+
 shiny::shinyApp(
   ui = page_navbar(
-    title = "Premier League Viz",
+    # logo = "premier_league_logo.webp",
+    title = "Premier League Stats",
     theme = bs_theme(version = 5, bootswatch = "pulse"),
     # theme = shinytheme("spacelab"),
-    tabPanel("panel 1", 
-             fluidRow(
-              column(12,
-               card(
-                 max_height = 200,
-                 # full_screen = TRUE,
-                 card_header("Standings"),
-                 reactableOutput("rct_main_table")
-               )
-              )
-                          ),
+    nav_panel(title = "One", 
               fluidRow(
-                column(6,
-                       card(
-                         max_height = 200,
-                         # full_screen = TRUE,
-                         card_header("A dynamically rendered plot"),
-                         reactableOutput("rct_top_scorers")
-                       )
-                       ),
-                column(6,
-                       card(
-                         max_height = 200,
-                         # full_screen = TRUE,
-                         card_header("A dynamically rendered plot"),
-                         reactableOutput("rct_top_assisters")
-                          )
-                        )
+      column(12,
+             card(
+               min_height = "80vh",
+               full_screen = TRUE,
+               card_header("Standings", class = "bg-primary"),
+               reactableOutput("rct_main_table")
+             )
+      )
+    ),
+    fluidRow(
+      layout_column_wrap(
+        width = 1/2,
+        card(
+          min_height = "50vh",
+          card_header("Top scorers", class = "bg-primary"),
+          reactableOutput("rct_top_scorers")
+        ),
+        card(
+          min_height = "50vh",
+          card_header("Top assisters", class = "bg-primary"),
+          reactableOutput("rct_top_assisters")
+        )
+      )
+    )
+    ),
+    nav_panel(title = "Two",
+             fluidRow(
+               column(6,
+                      card(
+                        max_height = 200,
+                        full_screen = TRUE,
+                        card_header(div("A dynamically rendered plot",
+                                    div(radioGroupButtons(
+                                      inputId = "metrics_by_GW_select",
+                                      label = "",
+                                      choices = c("Goals", "xG", "npxG"),
+                                      selected = "Goals",
+                                      individual = TRUE,
+                                      status = "secondary"
+                                        
+                                    ), style = "float:right;width:30%;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
+                        highchartOutput("hc_goals_by_gw")),
                       )
-             ),
-    tabPanel("panel 2", 
-             highchartOutput("hc_goals_by_gw")),
-    tabPanel("panel 3", "three")
-      # src = "https://supersport-cms-prod.azureedge.net/media/icxfej42/premier-league.png?width=500",
+                  )
+               ),
+    nav_panel(title = "Two", p("Second page content.")),
+    nav_spacer(),
+    nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/rstudio/shiny", target = "_blank")),
+    footer = "Test"
   ),
   server = function(input, output) {
   
@@ -72,11 +97,9 @@ shiny::shinyApp(
       
       reactable(
         premier_league_table,
-        showPageInfo = FALSE,
         pagination = FALSE,
-        showPageSizeOptions = FALSE,
-        defaultPageSize = 20,
         showSortable = TRUE,
+        # height = "80vh",
         sortable = TRUE,
         details = function(index) {
           
@@ -84,6 +107,8 @@ shiny::shinyApp(
           team <- epl_matchday_1to38_table[index,]$squad
           my_data <- epl_matchday_1to38_table[epl_matchday_1to38_table$squad == team,]
           
+          tagList(
+          br(),
           hchart(my_data, "line", hcaes(x = p, y = rk), 
                  shadow = TRUE) %>% 
             hc_size(height = 250) %>% 
@@ -98,9 +123,10 @@ shiny::shinyApp(
             hcaes(x = p, y = rk, group = Result), color = c("#76766f", "#d81920", "#13cf00"),
             tooltip = list(pointFormat = "{point.Round}<br>{point.squad} {point.GF} : {point.GA} {point.Opponent} ")
             )
+          )
         },
         defaultColDef = colDef(
-          # maxWidth = 73,
+          maxWidth = 80,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -113,7 +139,7 @@ shiny::shinyApp(
         columns = list(
           Rk = colDef(
             name = "P.",
-            # maxWidth = 40,
+            maxWidth = 40,
             align = "center",
             style = function(value) {
               value <- as.numeric(value)
@@ -140,7 +166,7 @@ shiny::shinyApp(
           ),
           Squad = colDef(
             name = "Team",
-            # maxWidth = 250,
+            maxWidth = 700,
             cell = function(value) {
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", value))
               image <- img(src = img_src, style = "height: 24px;", alt = value)
@@ -168,14 +194,12 @@ shiny::shinyApp(
       
       reactable(
         top_scorers_data,
-        showPageInfo = FALSE,
         pagination = FALSE,
-        showPageSizeOptions = FALSE,
-        defaultPageSize = 20,
         showSortable = TRUE,
         sortable = TRUE,
+        height = "100%",
+        defaultSortOrder = "desc",
         defaultColDef = colDef(
-          # maxWidth = 80,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -187,7 +211,7 @@ shiny::shinyApp(
         ),
         columns = list(
           Player = colDef(
-            # maxWidth = 250,
+            minWidth = 350,
             cell = function(value, index) {
               team <- top_scorers_data[index,]$Squad
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
@@ -204,7 +228,11 @@ shiny::shinyApp(
           ),
           Squad = colDef(show = FALSE),
           Goals = colDef(
-            style = list(fontWeight = "bold")
+            # style = list(fontWeight = "bold"),
+            cell = function(value) {
+              width <- paste0(value / max(top_scorers_data$Goals) * 100, "%")
+              bar_chart(value, width = width)
+            }
           )
         )
       )
@@ -236,7 +264,7 @@ shiny::shinyApp(
         ),
         columns = list(
           Player = colDef(
-            # maxWidth = 250,
+            minWidth = 350,
             cell = function(value, index) {
               team <- top_assisters_data[index,]$Squad
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
@@ -254,7 +282,10 @@ shiny::shinyApp(
           Squad = colDef(show = FALSE),
           # `Key passes` = colDef(maxWidth = 100),
           Assists = colDef(
-            style = list(fontWeight = "bold")
+            cell = function(value) {
+              width <- paste0(value / max(top_assisters_data$Assists) * 100, "%")
+              bar_chart(value, width = width)
+            }
           )
         )
       )
@@ -272,11 +303,20 @@ shiny::shinyApp(
     })
     
     output$hc_goals_by_gw <- renderHighchart({
-      hchart(cumulative_goals, 
+      
+      if(input$metrics_by_GW_select == "Goals"){
+        plot_data <- cumulative_goals
+      } else if(input$metrics_by_GW_select == "xG"){
+        plot_data <- cumulative_xG
+      } else if(input$metrics_by_GW_select == "npxG") {
+        plot_data <- cumulative_npxG
+      }
+      
+      hchart(plot_data, 
              "line", 
-             hcaes(x = Round, y = cumulative_goals, group = Scorer)) %>% 
-             hc_xAxis(title = list(text = "Matchweek"),
-                      tickPositions = c(1:39)) 
+             hcaes(x = as.numeric(time_value), 
+                   y = as.numeric(.data[[input$metrics_by_GW_select]]), 
+                   group = Player))
     
   })
   
