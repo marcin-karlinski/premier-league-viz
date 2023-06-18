@@ -104,7 +104,7 @@ cumulative_goals$goals <- 1 #adding inofrmation about goal that will be summed l
 #expanding the data frame so that GW where player didnt score have values of 0
 players <- unique(cumulative_goals$Scorer)  
 matchweeks <- unique(cumulative_goals$Round)
-expanded <- expand.grid(Scorer = players, Round = matchweeks)=
+expanded <- expand.grid(Scorer = players, Round = matchweeks)
 cumulative_goals <- merge(cumulative_goals, expanded, all = TRUE)
 cumulative_goals$goals[is.na(cumulative_goals$goals)] <- 0
 
@@ -117,6 +117,7 @@ players_to_keep <- cumulative_goals %>% filter(Round == 38 & cumulative_goals >=
 cumulative_goals <- cumulative_goals %>% 
   filter(Scorer %in% players_to_keep)
 
+cumulative_goals <- cumulative_goals %>% select(Player = Scorer, time_value = Round, Goals = cumulative_goals)
 saveRDS(cumulative_goals, "./data/cumulative_goals.rds")
 
 ##Now prepare data for cumulative xG by minute of the season
@@ -168,8 +169,8 @@ cumulative_xG$xG[is.na(cumulative_xG$xG)] <- 0
 cumulative_xG <- cumulative_xG[order(cumulative_xG$Player, cumulative_xG$cumulative_minute), ]
 cumulative_xG$cumulative_xG <- ave(cumulative_xG$xG, cumulative_xG$Player, FUN = cumsum, na.rm = TRUE)
 
+cumulative_xG <- cumulative_xG %>% select(Player, time_value = cumulative_minute, xG = cumulative_xG)
 saveRDS(cumulative_xG, "./data/cumulative_xG.rds")
-
 
 #The same but for non-pen xG
 all_matches_logs_eng_2023 <- readRDS("./data/all_matches_logs_eng_2023.rds")
@@ -210,6 +211,7 @@ cumulative_npxG$xG[is.na(cumulative_npxG$xG)] <- 0
 
 cumulative_npxG <- cumulative_npxG[order(cumulative_npxG$Player, cumulative_npxG$cumulative_minute), ]
 cumulative_npxG$cumulative_npxG <- ave(cumulative_npxG$xG, cumulative_npxG$Player, FUN = cumsum, na.rm = TRUE)
-print(cumulative_npxG)
 
+cumulative_npxG <- cumulative_npxG %>% select(Player, time_value = cumulative_minute, npxG = cumulative_npxG)
 saveRDS(cumulative_npxG, "./data/cumulative_npxG.rds")
+
