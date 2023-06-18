@@ -14,8 +14,6 @@ premier_league_table <- readRDS("./data/premier_league_table.rds") %>%
 
 epl_matchday_1to38_table <- readRDS("./data/epl_matchday_1to38_table.rds")
 
-# pl_2022 <- readRDS("./data/eng_matchweek_detailed.rds")
-
 prem_2023_player_shooting <- readRDS("./data/prem_2023_player_shooting.rds") %>% 
   select(Player, Squad, Goals = Gls_Standard, xG = xG_Expected, npxG = npxG_Expected)
 
@@ -34,11 +32,10 @@ bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", 
 
 shiny::shinyApp(
   ui = page_navbar(
-    # logo = "premier_league_logo.webp",
     title = "Premier League Stats",
+    includeCSS("./www/styling.css"),
     theme = bs_theme(version = 5, bootswatch = "pulse"),
-    # theme = shinytheme("spacelab"),
-    nav_panel(title = "One", 
+    nav_panel(title = "Summary", 
               fluidRow(
       column(12,
              card(
@@ -85,10 +82,10 @@ shiny::shinyApp(
                       )
                   )
                ),
-    nav_panel(title = "Two", p("Second page content.")),
+    nav_panel(title = "Player statistics", p("Second page content.")),
     nav_spacer(),
     nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/rstudio/shiny", target = "_blank")),
-    footer = "Test"
+    footer = div("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com). ", style = "background: #fff; position:absolute; bottom:0; width:100%;")
   ),
   server = function(input, output) {
   
@@ -101,6 +98,12 @@ shiny::shinyApp(
         showSortable = TRUE,
         # height = "80vh",
         sortable = TRUE,
+        rowStyle = function(index) {
+          if (index > 0 & index <= 4) list(background = "#c8dbfa",  borderLeft = "solid #4285F4 3px")
+          else if (index >= 5 & index < 7) list(background = "#ffe2c9",  borderLeft = "solid #dc8136 3px")
+          else if (index == 7) list(background = "#b8fcc1", borderLeft = "solid #66a55c 3px")
+          else if (index >= 18) list(background = "#ffaca1", borderLeft = "solid #ca503f 3px")
+        },
         details = function(index) {
           
           epl_matchday_1to38_table <- epl_matchday_1to38_table[order(-epl_matchday_1to38_table$p, epl_matchday_1to38_table$rk), ]
@@ -140,29 +143,7 @@ shiny::shinyApp(
           Rk = colDef(
             name = "P.",
             maxWidth = 40,
-            align = "center",
-            style = function(value) {
-              value <- as.numeric(value)
-              if(value < 5){
-                color = "#4285F4"
-                font_color = "#fff"
-              }else if (value < 7){
-                color = "#dc8136"
-                font_color = "#fff"
-              }else if (value == 7){
-                color = "#66a55c"
-                font_color = "#fff"
-              } else if (value >=18){
-                color = "#ca503f"
-                font_color = "#fff"
-              } else {
-                color = "#fff"
-                font_color = "#000000"
-              }
-              list(background = color,
-                   color = font_color,
-                   fontWeight = "bold")
-            }
+            align = "center"
           ),
           Squad = colDef(
             name = "Team",
