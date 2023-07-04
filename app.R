@@ -39,7 +39,6 @@ shiny::shinyApp(
               fluidRow(
       column(12,
              card(
-               min_height = "80vh",
                full_screen = TRUE,
                card_header("Standings", class = "bg-primary"),
                reactableOutput("rct_main_table")
@@ -50,12 +49,10 @@ shiny::shinyApp(
       layout_column_wrap(
         width = 1/2,
         card(
-          min_height = "50vh",
           card_header("Top scorers", class = "bg-primary"),
           reactableOutput("rct_top_scorers")
         ),
         card(
-          min_height = "50vh",
           card_header("Top assisters", class = "bg-primary"),
           reactableOutput("rct_top_assisters")
         )
@@ -134,7 +131,6 @@ shiny::shinyApp(
           )
         },
         defaultColDef = colDef(
-          maxWidth = 80,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -152,7 +148,7 @@ shiny::shinyApp(
           ),
           Squad = colDef(
             name = "Team",
-            maxWidth = 700,
+            minWidth = 700,
             cell = function(value) {
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", value))
               image <- img(src = img_src, style = "height: 24px;", alt = value)
