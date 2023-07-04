@@ -60,7 +60,9 @@ shiny::shinyApp(
           reactableOutput("rct_top_assisters")
         )
       )
-    )
+    ),
+    hr(),
+    p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")
     ),
     nav_panel(title = "Two",
              fluidRow(
@@ -80,12 +82,15 @@ shiny::shinyApp(
                                     ), style = "float:right;width:30%;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
                         highchartOutput("hc_goals_by_gw")),
                       )
-                  )
+                  ),
+             hr(),
+             p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")
                ),
-    nav_panel(title = "Player statistics", p("Second page content.")),
+    nav_panel(title = "Player statistics", p("Second page content."),
+              hr(),
+              p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")),
     nav_spacer(),
-    nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/rstudio/shiny", target = "_blank")),
-    footer = div("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com). ", style = "background: #fff; position:absolute; bottom:0; width:100%;")
+    nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/rstudio/shiny", target = "_blank"))
   ),
   server = function(input, output) {
   
