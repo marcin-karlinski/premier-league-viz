@@ -8,6 +8,9 @@ library(bslib)
 library(shinythemes)
 library(shinyWidgets)
 library(htmltools)
+library(shinycssloaders)
+
+options(highcharter.rjson = FALSE)
 
 premier_league_table <- readRDS("./data/premier_league_table.rds") %>% 
   select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
@@ -61,13 +64,13 @@ shiny::shinyApp(
     hr(),
     p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")
     ),
-    nav_panel(title = "Two",
+    nav_panel(title = "League statistics",
              fluidRow(
                column(6,
                       card(
-                        max_height = 200,
                         full_screen = TRUE,
-                        card_header(div("A dynamically rendered plot",
+                        min_height = "80vh",
+                        card_header(div("Cumulative output by Gameweek",
                                     div(radioGroupButtons(
                                       inputId = "metrics_by_GW_select",
                                       label = "",
@@ -287,18 +290,37 @@ shiny::shinyApp(
     output$hc_goals_by_gw <- renderHighchart({
       
       if(input$metrics_by_GW_select == "Goals"){
-        plot_data <- cumulative_goals
+        plot_data <- cumulative_goals %>% 
+          mutate(Goals = as.numeric(Goals)) %>% 
+          group_by(Player, time_value) %>% 
+          summarize(Goals = max(Goals)) %>% 
+          ungroup()
       } else if(input$metrics_by_GW_select == "xG"){
-        plot_data <- cumulative_xG
+        plot_data <- cumulative_xG %>% 
+          mutate(xG = as.numeric(xG)) %>% 
+          group_by(Player, time_value) %>% 
+          summarize(xG = max(xG)) %>% 
+          ungroup()
       } else if(input$metrics_by_GW_select == "npxG") {
-        plot_data <- cumulative_npxG
+        plot_data <- cumulative_npxG %>% 
+          mutate(npxG = as.numeric(npxG)) %>% 
+          group_by(Player, time_value) %>% 
+          summarize(npxG = max(npxG)) %>% 
+          ungroup() 
       }
       
-      hchart(plot_data, 
-             "line", 
-             hcaes(x = as.numeric(time_value), 
-                   y = as.numeric(.data[[input$metrics_by_GW_select]]), 
-                   group = Player))
+      xseries <- plot_data %>% 
+        select(-time_value) %>%
+        # use `name` to name  series according the value of `cat` avariable
+        rename(name = Player) %>%
+        group_by(name) %>% 
+        do(data = list_parse2(.)) %>%
+        # add type of series
+        mutate(type = "line")
+      
+      highchart() %>% 
+        hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
+        hc_add_series_list(xseries)
     
   })
   
