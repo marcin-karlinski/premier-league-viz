@@ -26,6 +26,7 @@ prem_2023_player_passing <- readRDS("./data/prem_2023_player_passing.rds") %>%
 cumulative_goals <- readRDS("./data/cumulative_goals.rds")
 cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
+cumulative_assists <- readRDS("./data/cumulative_assists.rds")
 
 bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
   bar <- div(style = list(background = fill, width = width, height = height))
@@ -66,21 +67,35 @@ shiny::shinyApp(
     ),
     nav_panel(title = "League statistics",
              fluidRow(
-               column(6,
+               layout_column_wrap(
+                 width = 1/2,
                       card(
                         full_screen = TRUE,
                         min_height = "80vh",
-                        card_header(div("Cumulative output by Gameweek",
+                        card_header(div("Cumulative goalscoring output by point of season",
                                     div(radioGroupButtons(
-                                      inputId = "metrics_by_GW_select",
+                                      inputId = "goals_metrics_by_GW_select",
                                       label = "",
                                       choices = c("Goals", "xG", "npxG"),
                                       selected = "Goals",
                                       individual = TRUE,
                                       status = "secondary"
                                         
-                                    ), style = "float:right;width:30%;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
+                                    ), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
                         highchartOutput("hc_goals_by_gw")),
+                 card(
+                   full_screen = TRUE,
+                   min_height = "80vh",
+                   card_header(div("Cumulative creative output by point of season",
+                                   div(radioGroupButtons(
+                                     inputId = "assists_metrics_by_GW_select",
+                                     label = "",
+                                     choices = c("Assists", "xA"),
+                                     selected = "Assists",
+                                     individual = TRUE,
+                                     status = "secondary"
+                                   ), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
+                   highchartOutput("hc_assists_by_gw"))
                       )
                   ),
              hr(),
@@ -289,19 +304,19 @@ shiny::shinyApp(
     
     output$hc_goals_by_gw <- renderHighchart({
       
-      if(input$metrics_by_GW_select == "Goals"){
+      if(input$goals_metrics_by_GW_select == "Goals"){
         plot_data <- cumulative_goals %>% 
           mutate(Goals = as.numeric(Goals)) %>% 
           group_by(Player, time_value) %>% 
           summarize(Goals = max(Goals)) %>% 
           ungroup()
-      } else if(input$metrics_by_GW_select == "xG"){
+      } else if(input$goals_metrics_by_GW_select == "xG"){
         plot_data <- cumulative_xG %>% 
           mutate(xG = as.numeric(xG)) %>% 
           group_by(Player, time_value) %>% 
           summarize(xG = max(xG)) %>% 
           ungroup()
-      } else if(input$metrics_by_GW_select == "npxG") {
+      } else if(input$goals_metrics_by_GW_select == "npxG") {
         plot_data <- cumulative_npxG %>% 
           mutate(npxG = as.numeric(npxG)) %>% 
           group_by(Player, time_value) %>% 
@@ -318,10 +333,41 @@ shiny::shinyApp(
         # add type of series
         mutate(type = "line")
       
-      highchart() %>% 
+      highchart2() %>% 
         hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
         hc_add_series_list(xseries)
     
   })
+    
+    output$hc_assists_by_gw <- renderHighchart({
+      
+      if(input$assists_metrics_by_GW_select == "Assists"){
+        plot_data <- cumulative_assists %>% 
+          mutate(Assists = as.numeric(Assists)) %>% 
+          group_by(Player, time_value) %>% 
+          summarize(Assists = max(Assists)) %>% 
+          ungroup()
+      } else if(input$goals_metrics_by_GW_select == "xA"){
+        plot_data <- cumulative_xA %>% 
+          mutate(xA = as.numeric(xA)) %>% 
+          group_by(Player, time_value) %>% 
+          summarize(xA = max(xA)) %>% 
+          ungroup()
+      }
+      
+      xseries <- plot_data %>% 
+        select(-time_value) %>%
+        # use `name` to name  series according the value of `cat` avariable
+        rename(name = Player) %>%
+        group_by(name) %>% 
+        do(data = list_parse2(.)) %>%
+        # add type of series
+        mutate(type = "line")
+      
+      highchart2() %>% 
+        hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
+        hc_add_series_list(xseries)
+      
+    })
   
 })
