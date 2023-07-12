@@ -216,6 +216,120 @@ cumulative_npxG$cumulative_npxG <- ave(cumulative_npxG$xG, cumulative_npxG$Playe
 cumulative_npxG <- cumulative_npxG %>% select(Player, time_value = cumulative_minute, npxG = cumulative_npxG)
 saveRDS(cumulative_npxG, "./data/cumulative_npxG.rds")
 
+##Fotmob momentum
+prem_2023_player_shooting <- fb_league_stats(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2023,
+  tier = "1st",
+  non_dom_league_url = NA,
+  stat_type = "shooting",
+  team_or_player = "player"
+)
+dplyr::glimpse(prem_2023_player_shooting)
+saveRDS(prem_2023_player_shooting, "./data/prem_2023_player_shooting.rds")
+
+prem_2023_player_passing <- fb_league_stats(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2023,
+  tier = "1st",
+  non_dom_league_url = NA,
+  stat_type = "passing",
+  team_or_player = "player"
+)
+dplyr::glimpse(prem_2023_player_passing)
+saveRDS(prem_2023_player_passing, "./data/prem_2023_player_passing.rds")
+
+prem_2023_player_defense <- fb_league_stats(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2023,
+  tier = "1st",
+  non_dom_league_url = NA,
+  stat_type = "defense",
+  team_or_player = "player"
+)
+dplyr::glimpse(prem_2023_player_defense)
+saveRDS(prem_2023_player_defense, "./data/prem_2023_player_defense.rds")
+
+prem_2023_player_possession <- fb_league_stats(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2023,
+  tier = "1st",
+  non_dom_league_url = NA,
+  stat_type = "possession",
+  team_or_player = "player"
+)
+dplyr::glimpse(prem_2023_player_possession)
+saveRDS(prem_2023_player_possession, "./data/prem_2023_player_possession.rds")
+
+prem_2023_player_misc <- fb_league_stats(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2023,
+  tier = "1st",
+  non_dom_league_url = NA,
+  stat_type = "misc",
+  team_or_player = "player"
+)
+dplyr::glimpse(prem_2023_player_misc)
+saveRDS(prem_2023_player_misc, "./data/prem_2023_player_misc.rds")
+
+prem_2023_player_standard <- fb_league_stats(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2023,
+  tier = "1st",
+  non_dom_league_url = NA,
+  stat_type = "standard",
+  team_or_player = "player"
+)
+saveRDS(prem_2023_player_standard, "./data/prem_2023_player_standard.rds")
+
+radar_data <- prem_2023_player_standard %>% 
+  select(Player, `Min_Playing Time`, `npxG_Per 90 Minutes`, `xAG_Per 90 Minutes`)
+
+radar_shooting_standard <- prem_2023_player_shooting %>% 
+  select(Player, npxG_per_Sh_Expected, )
+
+
+
+##Cumulative assists
+#Extracting goal logs for cumulative goals by GW chart
+eng_2023_goal_logs <- readRDS("./data/eng_2023_goal_logs.rds")
+
+eng_2023_assist_logs <- eng_2023_goal_logs %>% 
+  filter(Comp == "Premier League" & Assist != "") %>% 
+  rename(Player = Assist) %>% 
+  select(Round, Player) %>% 
+  mutate(Round = as.numeric(gsub("\\D", "", Round))) %>% #getting just GW by number
+  mutate(assists = 1)
+
+cumulative_assists <- eng_2023_assist_logs
+cumulative_assists$assist <- 1 #adding inofrmation about goal that will be summed later 
+
+#expanding the data frame so that GW where player didnt score have values of 0
+players <- unique(cumulative_assists$Player)  
+matchweeks <- unique(cumulative_assists$Round)
+expanded <- expand.grid(Player = players, Round = matchweeks)
+cumulative_assists <- merge(cumulative_assists, expanded, all = TRUE)
+cumulative_assists$assists[is.na(cumulative_assists$assists)] <- 0
+
+#first order df by Scorer and Round to cumsum
+cumulative_assists <- cumulative_assists[order(cumulative_assists$Player, cumulative_assists$Round), ]
+cumulative_assists$cumulative_assists <- ave(cumulative_assists$assists, cumulative_assists$Player, FUN = cumsum, na.rm = TRUE)
+
+#Only keep the top scorers to make the chart more readable
+players_to_keep <- cumulative_assists %>% filter(Round == 38 & cumulative_assists >= 10) %>% pull(Player)
+cumulative_assists <- cumulative_assists %>% 
+  filter(Player %in% players_to_keep)
+
+cumulative_assists <- cumulative_assists %>% select(Player, time_value = Round, Assists = cumulative_assists)
+saveRDS(cumulative_assists, "./data/cumulative_assists.rds")
+
+
 #Shot locations
 league_matches <- fotmob_get_league_matches(
   country =     c("ENG"),
