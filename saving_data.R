@@ -1,5 +1,6 @@
 library(tidyverse)
 library(worldfootballR)
+options(scipen=999)
 
 #Extracting the final Premier League table
 premier_league_table <- fb_season_team_stats(country = "ENG", 
@@ -215,3 +216,12 @@ cumulative_npxG$cumulative_npxG <- ave(cumulative_npxG$xG, cumulative_npxG$Playe
 cumulative_npxG <- cumulative_npxG %>% select(Player, time_value = cumulative_minute, npxG = cumulative_npxG)
 saveRDS(cumulative_npxG, "./data/cumulative_npxG.rds")
 
+#Shot locations
+league_matches <- fotmob_get_league_matches(
+  country =     c("ENG"),
+  league_name = c("Premier League"),
+  season = "2022/2023"
+)
+fotmob_matches <- unique(league_matches$id)
+match_details <- fotmob_get_match_details(fotmob_matches)
+saveRDS(match_details, "./data/match_details.rds")
