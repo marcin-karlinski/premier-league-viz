@@ -100,7 +100,7 @@ eng_2023_goal_logs <- eng_2023_goal_logs %>%
   mutate(goals = 1)
 
 cumulative_goals <- eng_2023_goal_logs
-cumulative_goals$goals <- 1 #adding inofrmation about goal that will be summed later 
+cumulative_goals$goals <- 1 #adding information about goal that will be summed later 
 
 #expanding the data frame so that GW where player didnt score have values of 0
 players <- unique(cumulative_goals$Scorer)  
@@ -330,6 +330,53 @@ cumulative_assists <- cumulative_assists %>% select(Player, time_value = Round, 
 saveRDS(cumulative_assists, "./data/cumulative_assists.rds")
 
 
+###Cumulative xA
+all_matches_logs_eng_2023 <- readRDS("./data/all_matches_logs_eng_2023.rds")
+
+gameweeks <- all_matches_logs_eng_2023 %>%
+  distinct(Date, Squad)
+
+gameweeks <- gameweeks %>% 
+  arrange(Squad, Date) %>% 
+  group_by(Squad) %>%
+  mutate(Matchweek = 1:n())
+
+all_matches_logs_eng_2023_with_GW <- all_matches_logs_eng_2023 %>% 
+  filter(grepl("Pass", Event_SCA_1)) %>%
+  # filter(Event_SCA_1 != "" & !is.na(Event_SCA_1)) %>%
+  left_join(gameweeks, by = c("Date", "Squad"))
+
+all_matches_logs_eng_2023_with_GW <- all_matches_logs_eng_2023_with_GW %>% 
+  mutate(Minute = as.numeric(substr(Minute, 1, 2))) %>% 
+  mutate(cumulative_minute = (Matchweek-1)*90 + Minute)
+
+all_matches_logs_eng_2023_with_GW <- all_matches_logs_eng_2023_with_GW %>% 
+  select(Player = Player_SCA_1, xA = xG, cumulative_minute) %>% 
+  filter(!grepl("\\(.*\\)", Player)) %>% 
+  mutate(xA = as.numeric(xA))
+
+top_players_xA <- readRDS("./data/prem_2023_player_passing.rds") %>% 
+  arrange(-as.numeric(xA)) %>% 
+  slice(1:10) %>% 
+  pull(Player)
+
+cumulative_xA <- all_matches_logs_eng_2023_with_GW %>% 
+  filter(Player %in% top_players_xA)
+
+players <- unique(cumulative_xA$Player)
+cum_minutes <- 1:3420
+expanded <- expand.grid(Player = players, cumulative_minute = cum_minutes)
+
+cumulative_xA <- merge(cumulative_xA, expanded, all = TRUE)
+cumulative_xA$xA[is.na(cumulative_xA$xA)] <- 0
+
+cumulative_xA <- cumulative_xA[order(cumulative_xA$Player, cumulative_xA$cumulative_minute), ]
+cumulative_xA$cumulative_xA <- ave(cumulative_xA$xA, cumulative_xA$Player, FUN = cumsum, na.rm = TRUE)
+
+cumulative_xA <- cumulative_xA %>% select(Player, time_value = cumulative_minute, xA = cumulative_xA)
+saveRDS(cumulative_xA, "./data/cumulative_xA.rds")
+
+
 #Shot locations
 league_matches <- fotmob_get_league_matches(
   country =     c("ENG"),
@@ -339,3 +386,11 @@ league_matches <- fotmob_get_league_matches(
 fotmob_matches <- unique(league_matches$id)
 match_details <- fotmob_get_match_details(fotmob_matches)
 saveRDS(match_details, "./data/match_details.rds")
+
+prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
+standard_over_1000_minutes <- prem_2023_player_standard %>% 
+  filter(`Min_Playing Time` > 1000) %>% 
+  select(Player, `Gls_Per 90 Minutes`, `xG_Per 90 Minutes`, `npxG_Per 90 Minutes`, `npxG+xAG_Per 90 Minutes`, `Ast_Per 90 Minutes`, `xAG_Per 90 Minutes`) %>% 
+  mutate(across(c(`Gls_Per 90 Minutes`, `xG_Per 90 Minutes`, `npxG_Per 90 Minutes`, `npxG+xAG_Per 90 Minutes`, `Ast_Per 90 Minutes`, `xAG_Per 90 Minutes`), as.numeric))
+
+saveRDS(standard_over_1000_minutes, "./data/standard_over_1000_minutes.rds")

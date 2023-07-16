@@ -23,10 +23,14 @@ prem_2023_player_shooting <- readRDS("./data/prem_2023_player_shooting.rds") %>%
 prem_2023_player_passing <- readRDS("./data/prem_2023_player_passing.rds") %>% 
   select(Player, Squad, Assists = Ast, `Key passes` = KP, xA)
 
+prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
+standard_over_1000_minutes <- readRDS("./data/standard_over_1000_minutes.rds")
+
 cumulative_goals <- readRDS("./data/cumulative_goals.rds")
 cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 cumulative_assists <- readRDS("./data/cumulative_assists.rds")
+cumulative_xA <- readRDS("./data/cumulative_xA.rds")
 
 bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
   bar <- div(style = list(background = fill, width = width, height = height))
@@ -66,6 +70,40 @@ shiny::shinyApp(
     p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")
     ),
     nav_panel(title = "League statistics",
+              fluidRow(
+                layout_column_wrap(
+                  width = 1/2,
+                  card(
+                    full_screen = TRUE,
+                    min_height = "80vh",
+                    card_header(div("Scoring output per 90 minutes",
+                                    div(
+                                      selectizeInput(
+                                        inputId = "goals_metrics_per90_select",
+                                        label = "",
+                                        choices = c("Goals" = "Gls_Per 90 Minutes", 
+                                                    "xG" = "xG_Per 90 Minutes", 
+                                                    "npxG" = "npxG_Per 90 Minutes", 
+                                                    "Assists" = "Ast_Per 90 Minutes",  
+                                                    "xA" = "xAG_Per 90 Minutes", 
+                                                    "npxG+xA" = "npxG+xAG_Per 90 Minutes"),
+                                        selected = "Gls_Per 90 Minutes"), 
+                                      style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
+                    highchartOutput("hc_scoring_per90")),
+                  card(
+                    full_screen = TRUE,
+                    min_height = "80vh",
+                    card_header(div("Creative output per 90 minutes",
+                                    div(radioGroupButtons(
+                                      inputId = "assists_metrics_per90_select",
+                                      label = "",
+                                      choices = c("Assists", "xA", "xT"),
+                                      selected = "Assists",
+                                      individual = TRUE,
+                                      status = "secondary"), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
+                    highchartOutput("hc_creative_per90")),
+                )
+              ),
              fluidRow(
                layout_column_wrap(
                  width = 1/2,
@@ -190,12 +228,14 @@ shiny::shinyApp(
     
     output$rct_top_scorers <- renderReactable({
       
-      top_scorers_data <- prem_2023_player_shooting %>% arrange(-Goals) %>% slice(1:8)
+      top_scorers_data <- prem_2023_player_shooting %>% arrange(-Goals)
       
       reactable(
         top_scorers_data,
-        pagination = FALSE,
+        showPagination = FALSE,
+        pagination = TRUE,
         showSortable = TRUE,
+        defaultPageSize = 7,
         sortable = TRUE,
         height = "100%",
         defaultSortOrder = "desc",
@@ -241,14 +281,15 @@ shiny::shinyApp(
     
     output$rct_top_assisters <- renderReactable({
       
-      top_assisters_data <- prem_2023_player_passing %>% arrange(-Assists) %>% slice(1:8)
+      top_assisters_data <- prem_2023_player_passing %>% arrange(-Assists)
       
       reactable(
+        showPagination = FALSE,
         top_assisters_data,
         showPageInfo = FALSE,
-        pagination = FALSE,
+        pagination = TRUE,
         showPageSizeOptions = FALSE,
-        defaultPageSize = 20,
+        defaultPageSize = 7,
         showSortable = TRUE,
         sortable = TRUE,
         defaultColDef = colDef(
@@ -290,16 +331,6 @@ shiny::shinyApp(
         )
       )
       
-    })
-    
-    output$hc_test <- renderHighchart({
-      stats %>% 
-        arrange(-`npxG_Per`) %>% 
-        hchart(
-          'bar', hcaes(x = Squad, y = `npxG_Per`),
-          color = "#0073C2FF"
-        ) %>% 
-        hc_size(height = 250)
     })
     
     output$hc_goals_by_gw <- renderHighchart({
@@ -347,7 +378,7 @@ shiny::shinyApp(
           group_by(Player, time_value) %>% 
           summarize(Assists = max(Assists)) %>% 
           ungroup()
-      } else if(input$goals_metrics_by_GW_select == "xA"){
+      } else if(input$assists_metrics_by_GW_select == "xA"){
         plot_data <- cumulative_xA %>% 
           mutate(xA = as.numeric(xA)) %>% 
           group_by(Player, time_value) %>% 
@@ -367,6 +398,38 @@ shiny::shinyApp(
       highchart2() %>% 
         hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
         hc_add_series_list(xseries)
+      
+    })
+    
+    output$hc_scoring_per90 <- renderHighchart({
+      
+      if(input$goals_metrics_per90_select == "npxG+xAG_Per 90 Minutes"){
+        
+        hc_data <- standard_over_1000_minutes %>%
+          arrange(-.data[[input$goals_metrics_per90_select]]) %>% 
+          slice(1:10)
+        
+        print(hc_data)
+        
+        hc <- highchart() %>% 
+          hc_chart(type = "bar") %>%
+          hc_plotOptions(bar = list(stacking = "normal")) %>%
+          hc_xAxis(categories = hc_data$Player) %>%
+          hc_add_series(name="xA",
+                        data = hc_data$`xAG_Per 90 Minutes`) %>%
+          hc_add_series(name="npxG",
+                        data = hc_data$`npxG_Per 90 Minutes`)
+        
+      } else{
+        
+        hc <- standard_over_1000_minutes %>%
+          arrange(-.data[[input$goals_metrics_per90_select]]) %>% 
+          slice(1:10) %>% 
+          hchart('bar', hcaes(x = Player, y = .data[[input$goals_metrics_per90_select]]))
+        
+      }
+
+      hc
       
     })
   
