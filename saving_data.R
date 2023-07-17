@@ -386,6 +386,7 @@ league_matches <- fotmob_get_league_matches(
 fotmob_matches <- unique(league_matches$id)
 match_details <- fotmob_get_match_details(fotmob_matches)
 saveRDS(match_details, "./data/match_details.rds")
+match_details <- readRDS("./data/match_details.rds")
 
 prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
 standard_over_1000_minutes <- prem_2023_player_standard %>% 
@@ -394,3 +395,26 @@ standard_over_1000_minutes <- prem_2023_player_standard %>%
   mutate(across(c(`Gls_Per 90 Minutes`, `xG_Per 90 Minutes`, `npxG_Per 90 Minutes`, `npxG+xAG_Per 90 Minutes`, `Ast_Per 90 Minutes`, `xAG_Per 90 Minutes`), as.numeric))
 
 saveRDS(standard_over_1000_minutes, "./data/standard_over_1000_minutes.rds")
+
+# offense_tackles <- prem_2023_player_standard %>% 
+#         filter(`Min_Playing Time` > 1000) %>% 
+#         select(Player, `Gls_Per 90 Minutes`, `xG_Per 90 Minutes`, `npxG_Per 90 Minutes`, `npxG+xAG_Per 90 Minutes`, `Ast_Per 90 Minutes`, `xAG_Per 90 Minutes`) %>% 
+#         left_join(prem_2023_player_defense %>% select(Player, `Att 3rd_Tackles`), by = "Player")
+# 
+# 
+# hc <- offense_tackles %>% hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `npxG+xAG_Per 90 Minutes`))
+# hc
+
+fotmob_2023 <- fotmob_get_season_stats(
+  country = "ENG",
+  league_name = "Premier League",
+  season = "2022/2023",
+  stat_name = c("xG + xA per 90", "Possession won final 3rd per 90"),
+  team_or_player = "player"
+) 
+
+xGxA_vs_possesions_fotmob <- fotmob_2023 %>% 
+  filter(minutes_played > 1000) %>% 
+  pivot_wider(id_cols = c(participant_name, team_name, team_color), names_from = stat_name, values_from = stat_value)
+
+saveRDS(xGxA_vs_possesions_fotmob, "xGxA_vs_possesions_fotmob.rds")

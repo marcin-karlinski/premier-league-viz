@@ -9,6 +9,9 @@ library(shinythemes)
 library(shinyWidgets)
 library(htmltools)
 library(shinycssloaders)
+library(ggplot2)
+library(ggsoccer)
+library(plotly)
 
 options(highcharter.rjson = FALSE)
 
@@ -26,11 +29,18 @@ prem_2023_player_passing <- readRDS("./data/prem_2023_player_passing.rds") %>%
 prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
 standard_over_1000_minutes <- readRDS("./data/standard_over_1000_minutes.rds")
 
+prem_2023_player_defense <- readRDS("./data/prem_2023_player_defense.rds")
+
 cumulative_goals <- readRDS("./data/cumulative_goals.rds")
 cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 cumulative_assists <- readRDS("./data/cumulative_assists.rds")
 cumulative_xA <- readRDS("./data/cumulative_xA.rds")
+
+xGxA_vs_possesions_fotmob <- readRDS("xGxA_vs_possesions_fotmob.rds")
+
+match_details <- readRDS("./data/match_details.rds") %>% 
+  select(player_name, x, y, shot_type, on_goal_shot_x, on_goal_shot_y)
 
 bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
   bar <- div(style = list(background = fill, width = width, height = height))
@@ -93,15 +103,8 @@ shiny::shinyApp(
                   card(
                     full_screen = TRUE,
                     min_height = "80vh",
-                    card_header(div("Creative output per 90 minutes",
-                                    div(radioGroupButtons(
-                                      inputId = "assists_metrics_per90_select",
-                                      label = "",
-                                      choices = c("Assists", "xA", "xT"),
-                                      selected = "Assists",
-                                      individual = TRUE,
-                                      status = "secondary"), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
-                    highchartOutput("hc_creative_per90")),
+                    card_header("Threat vs regains per 90 minutes"),
+                    highchartOutput("hc_threat_vs_regains_per90")),
                 )
               ),
              fluidRow(
@@ -136,6 +139,30 @@ shiny::shinyApp(
                    highchartOutput("hc_assists_by_gw"))
                       )
                   ),
+             fluidRow(
+               layout_column_wrap(
+                 width = 1/2,
+                 card(
+                   card_header(div("Player shot locations",
+                                   div(pickerInput(
+                                     inputId = "shot_location_player_select",
+                                     label = "",
+                                     choices = unique(match_details$player_name),
+                                     selected = "Erling Braut Haaland",
+                                     options = list( `live-search` = TRUE),
+                                   ), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
+                   full_screen = TRUE,
+                   min_height = "80vh",
+                  plotlyOutput("shot_location_plot")
+                 ),
+                 card(
+                   card_header("Player shot locations"),
+                   full_screen = TRUE,
+                   min_height = "80vh",
+                   plotlyOutput("xGOT_plot")
+                 )
+              )
+             ),
              hr(),
              p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")
                ),
@@ -409,8 +436,6 @@ shiny::shinyApp(
           arrange(-.data[[input$goals_metrics_per90_select]]) %>% 
           slice(1:10)
         
-        print(hc_data)
-        
         hc <- highchart() %>% 
           hc_chart(type = "bar") %>%
           hc_plotOptions(bar = list(stacking = "normal")) %>%
@@ -432,5 +457,60 @@ shiny::shinyApp(
       hc
       
     })
+    
+    
+    output$hc_threat_vs_regains_per90 <- renderHighchart({
+      
+      hc <- xGxA_vs_possesions_fotmob %>% 
+        hchart('scatter', hcaes(y = `Possession won final 3rd per 90`, x = `xG + xA per 90`, group = team_name, color = team_color)) %>% 
+        hc_tooltip(formatter = JS("function(){
+                            return ('Player: ' + this.point.participant_name + '<br> xG + xA per 90: ' + this.x + '<br> Possessions won final 3rd per 90: ' + this.y)
+                            }")) %>% 
+        hc_legend(enabled = FALSE)
+      
+      hc
+      
+    })
+    
+    output$shot_location_plot <- renderPlotly({
+      
+      shot_location_data <- match_details %>% 
+        filter(player_name == input$shot_location_player_select)
+      
+      shot_location_chart <- ggplot(shot_location_data) +
+        annotate_pitch(dimensions = pitch_international,
+                       colour = "white",
+                       fill = "#3ab54a") +
+        geom_point(aes(x = x, y = y, fill = shot_type),
+                   shape = 21,
+                   size = 4) +
+        coord_flip(xlim = c(49, 110))+ 
+        scale_y_reverse() +
+        theme_pitch() +
+        theme(panel.background = element_rect(fill = "#3ab54a"))
+      
+      ggplotly(shot_location_chart)
+      
+    })
   
+    output$xGOT_plot <- renderPlotly({
+      
+      shot_location_data <- match_details %>% 
+        filter(player_name == input$shot_location_player_select)
+    
+      xGOT_chart <- shot_location_data %>% 
+        ggplot() +
+          geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y), size = 4) + 
+          xlim(c(-2, 4)) +
+          ylim(c(-1, 1)) + 
+          theme_void() + 
+          geom_segment(aes(x = 0, y = 0, xend = 0, yend = 0.67), colour = "gray", linewidth = 3) +
+          geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
+          geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
+          geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0))
+      
+      ggplotly(xGOT_chart)
+      
+    })
+    
 })
