@@ -12,6 +12,7 @@ library(shinycssloaders)
 library(ggplot2)
 library(ggsoccer)
 library(plotly)
+library(crosstalk)
 
 options(highcharter.rjson = FALSE)
 
@@ -472,12 +473,19 @@ shiny::shinyApp(
       
     })
     
+    shot_location_data <- reactive({
+      shot_location_data <- match_details %>% 
+        filter(player_name == input$shot_location_player_select) %>% 
+        mutate(event_id = row_number()) %>% 
+        SharedData$new(key = ~event_id, group = "shot_location")
+      
+      shot_location_data
+    })
+    
     output$shot_location_plot <- renderPlotly({
       
-      shot_location_data <- match_details %>% 
-        filter(player_name == input$shot_location_player_select)
-      
-      shot_location_chart <- ggplot(shot_location_data) +
+      ggplotly(
+        ggplot(shot_location_data()) +
         annotate_pitch(dimensions = pitch_international,
                        colour = "white",
                        fill = "#3ab54a") +
@@ -488,28 +496,23 @@ shiny::shinyApp(
         scale_y_reverse() +
         theme_pitch() +
         theme(panel.background = element_rect(fill = "#3ab54a"))
-      
-      ggplotly(shot_location_chart)
+      )
       
     })
   
     output$xGOT_plot <- renderPlotly({
       
-      shot_location_data <- match_details %>% 
-        filter(player_name == input$shot_location_player_select)
-    
-      xGOT_chart <- shot_location_data %>% 
-        ggplot() +
-          geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y), size = 4) + 
-          xlim(c(-2, 4)) +
-          ylim(c(-1, 1)) + 
-          theme_void() + 
-          geom_segment(aes(x = 0, y = 0, xend = 0, yend = 0.67), colour = "gray", linewidth = 3) +
-          geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
-          geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
-          geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0))
-      
-      ggplotly(xGOT_chart)
+      ggplotly(
+        ggplot(shot_location_data()) +
+        geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y), size = 4) + 
+        xlim(c(-2, 4)) +
+        ylim(c(-1, 1)) + 
+        theme_void() + 
+        geom_segment(aes(x = 0, y = 0, xend = 0, yend = 0.67), colour = "gray", linewidth = 3) +
+        geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
+        geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
+        geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0))
+      )
       
     })
     
