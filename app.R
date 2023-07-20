@@ -13,6 +13,7 @@ library(ggplot2)
 library(ggsoccer)
 library(plotly)
 library(crosstalk)
+library(RColorBrewer)
 
 options(highcharter.rjson = FALSE)
 
@@ -37,11 +38,9 @@ cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 cumulative_assists <- readRDS("./data/cumulative_assists.rds")
 cumulative_xA <- readRDS("./data/cumulative_xA.rds")
-
 xGxA_vs_possesions_fotmob <- readRDS("xGxA_vs_possesions_fotmob.rds")
-
 match_details <- readRDS("./data/match_details.rds") %>% 
-  select(player_name, x, y, shot_type, on_goal_shot_x, on_goal_shot_y)
+  mutate(across(c(on_goal_shot_x, on_goal_shot_y), ~ifelse(is.na(expected_goals_on_target), NA, .)))
 
 bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
   bar <- div(style = list(background = fill, width = width, height = height))
@@ -141,8 +140,7 @@ shiny::shinyApp(
                       )
                   ),
              fluidRow(
-               layout_column_wrap(
-                 width = 1/2,
+               column(12,
                  card(
                    card_header(div("Player shot locations",
                                    div(pickerInput(
@@ -152,17 +150,10 @@ shiny::shinyApp(
                                      selected = "Erling Braut Haaland",
                                      options = list( `live-search` = TRUE),
                                    ), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
-                   full_screen = TRUE,
-                   min_height = "80vh",
+                   min_height = "50vh",
                   plotlyOutput("shot_location_plot")
-                 ),
-                 card(
-                   card_header("Player shot locations"),
-                   full_screen = TRUE,
-                   min_height = "80vh",
-                   plotlyOutput("xGOT_plot")
                  )
-              )
+               )
              ),
              hr(),
              p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")
@@ -484,35 +475,40 @@ shiny::shinyApp(
     
     output$shot_location_plot <- renderPlotly({
       
-      ggplotly(
-        ggplot(shot_location_data()) +
-        annotate_pitch(dimensions = pitch_international,
-                       colour = "white",
-                       fill = "#3ab54a") +
-        geom_point(aes(x = x, y = y, fill = shot_type),
-                   shape = 21,
-                   size = 4) +
-        coord_flip(xlim = c(49, 110))+ 
-        scale_y_reverse() +
-        theme_pitch() +
-        theme(panel.background = element_rect(fill = "#3ab54a"))
+      shot_locations_chart <- ggplotly(
+        ggplot(shot_location_data(),
+               aes(x = x, y = y, label = label)) +
+          annotate_pitch(dimensions = pitch_international,
+                         colour = "white",
+                         fill = "#3ab54a") +
+          # geom_point(aes(x = x, y = y, fill = shot_type, shape = event_type, size = expected_goals)) +
+          coord_flip(xlim = c(49, 110))+ 
+          scale_y_reverse() +
+          theme_pitch() +
+          theme(panel.background = element_rect(fill = "#3ab54a"),
+                legend.position = c(50, 50)) +
+          # scale_fill_manual(values = brewer.pal(4, "Set3")) +
+          geom_text(family="EmojiOne", size=6)
       )
       
-    })
-  
-    output$xGOT_plot <- renderPlotly({
-      
-      ggplotly(
+      xGOT_chart <- ggplotly(
         ggplot(shot_location_data()) +
-        geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y), size = 4) + 
-        xlim(c(-2, 4)) +
-        ylim(c(-1, 1)) + 
-        theme_void() + 
-        geom_segment(aes(x = 0, y = 0, xend = 0, yend = 0.67), colour = "gray", linewidth = 3) +
-        geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
-        geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
-        geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0))
-      )
+          xlim(c(-2, 4)) +
+          ylim(c(-0.3, 1)) + 
+          theme_void() + 
+          geom_segment(aes(x = 0, y = 0, xend = 0, yend = 0.67), colour = "gray", linewidth = 3) +
+          geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
+          geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
+          geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0)) +
+          geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y, size = expected_goals_on_target, fill = event_type)) +
+          scale_fill_manual(values = brewer.pal(length(unique(shot_location_data()$data()$event_type)), "Set3"))
+      ) 
+      
+      plotly::subplot(shot_locations_chart, xGOT_chart) %>% 
+        hide_legend() %>% 
+        highlight(on = "plotly_hover", off = 'plotly_doubleclick')
+      
+      
       
     })
     

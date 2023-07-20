@@ -1,5 +1,6 @@
 library(tidyverse)
 library(worldfootballR)
+library(emojifont)
 options(scipen=999)
 
 #Extracting the final Premier League table
@@ -385,8 +386,15 @@ league_matches <- fotmob_get_league_matches(
 )
 fotmob_matches <- unique(league_matches$id)
 match_details <- fotmob_get_match_details(fotmob_matches)
+match_details <- match_details %>% 
+  mutate(label = case_when(
+    event_type == "Goal" ~ emoji('soccer'),
+    event_type == "AttemptSaved" ~ emoji('open_hands'),
+    event_type == "Miss" ~ emoji('x')
+  )
+  )
+
 saveRDS(match_details, "./data/match_details.rds")
-match_details <- readRDS("./data/match_details.rds")
 
 prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
 standard_over_1000_minutes <- prem_2023_player_standard %>% 
