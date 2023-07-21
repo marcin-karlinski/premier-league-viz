@@ -39,7 +39,7 @@ cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 cumulative_assists <- readRDS("./data/cumulative_assists.rds")
 cumulative_xA <- readRDS("./data/cumulative_xA.rds")
-xGxA_vs_possesions_fotmob <- readRDS("xGxA_vs_possesions_fotmob.rds")
+xGxA_vs_possesions_fotmob <- readRDS("./data/xGxA_vs_possesions_fotmob.rds")
 match_details <- readRDS("./data/match_details.rds") %>% 
   mutate(across(c(on_goal_shot_x, on_goal_shot_y), ~ifelse(is.na(expected_goals_on_target), NA, .)))
 fotmob_squads <- readRDS("./data/fotmob_squads.rds")
