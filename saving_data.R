@@ -392,8 +392,34 @@ match_details <- match_details %>%
     event_type == "AttemptSaved" ~ emoji('open_hands'),
     event_type == "Miss" ~ emoji('x')
   )
-  )
+  ) %>% 
+  mutate(team_name = case_when(
+    team_color == "#000000" ~ "Fulham",
+    team_color == "#00019E" ~ "Everton",
+    team_color == "#004A97" ~ "Crystal Palace",
+    team_color == "#0060A0" ~ "Leeds",
+    team_color == "#064b95" ~ "Chelsea",
+    team_color == "#0850A0" ~ "Brighton",
+    team_color == "#0d47a1" ~ "Leicester",
+    team_color == "#132257" ~ "Spurs",
+    team_color == "#66192C" ~ "West Ham",
+    team_color == "#69A8D8" ~ "Manchester city",
+    team_color == "#73103c" ~ "Aston Villa",
+    team_color == "#aa001a" ~ "Nott'ham Forest",
+    team_color == "#aa1818" ~ "Bournemouth",
+    team_color == "#bd0510" ~ "Arsenal",
+    team_color == "#C00808" ~ "Brentford",
+    team_color == "#C70101" ~ "Manchester United",
+    team_color == "#d3171e" ~ "Liverpool",
+    team_color == "#d71920" ~ "Southampton",
+    team_color == "#d99b00" ~ "Wolves"))
 
+fotmob_squads <- match_details %>% 
+  group_by(team_name, player_name) %>% 
+  summarize(n = length(unique(player_name))) %>% 
+  select(-n)
+
+saveRDS(fotmob_squads, "./data/fotmob_squads.rds")
 saveRDS(match_details, "./data/match_details.rds")
 
 prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")

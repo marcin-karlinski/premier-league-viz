@@ -41,6 +41,8 @@ cumulative_xA <- readRDS("./data/cumulative_xA.rds")
 xGxA_vs_possesions_fotmob <- readRDS("xGxA_vs_possesions_fotmob.rds")
 match_details <- readRDS("./data/match_details.rds") %>% 
   mutate(across(c(on_goal_shot_x, on_goal_shot_y), ~ifelse(is.na(expected_goals_on_target), NA, .)))
+fotmob_squads <- readRDS("./data/fotmob_squads.rds")
+
 
 bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
   bar <- div(style = list(background = fill, width = width, height = height))
@@ -142,15 +144,15 @@ shiny::shinyApp(
              fluidRow(
                column(12,
                  card(
-                   card_header(div("Player shot locations",
-                                   div(pickerInput(
-                                     inputId = "shot_location_player_select",
-                                     label = "",
-                                     choices = unique(match_details$player_name),
-                                     selected = "Erling Braut Haaland",
-                                     options = list( `live-search` = TRUE),
-                                   ), style = "float:right;margin-top:-25px;"), style = "display:inline-block;width:100%;")),
-                   min_height = "50vh",
+                   card_header("Player shot locations"),
+                   pickerInput(
+                     inputId = "shot_location_player_select",
+                     label = "",
+                     choices = split(unique(fotmob_squads)$player_name, unique(fotmob_squads)$team_name),
+                     selected = "Bukayo Saka",
+                     options = list( `live-search` = TRUE),
+                   ),
+                   min_height = "60vh",
                   plotlyOutput("shot_location_plot")
                  )
                )
@@ -170,6 +172,7 @@ shiny::shinyApp(
     output$rct_main_table <- renderReactable({
       
       reactable(
+        defaultExpanded = TRUE,
         premier_league_table,
         pagination = FALSE,
         showSortable = TRUE,
@@ -465,18 +468,19 @@ shiny::shinyApp(
     })
     
     shot_location_data <- reactive({
-      shot_location_data <- match_details %>% 
-        filter(player_name == input$shot_location_player_select) %>% 
-        mutate(event_id = row_number()) %>% 
-        SharedData$new(key = ~event_id, group = "shot_location")
       
-      shot_location_data
+      match_details %>% 
+        filter(player_name == input$shot_location_player_select) %>% 
+        mutate(event_id = row_number())
+      
     })
+    
+    shared_shot_location <- SharedData$new(shot_location_data, key = ~event_id)
     
     output$shot_location_plot <- renderPlotly({
       
       shot_locations_chart <- ggplotly(
-        ggplot(shot_location_data(),
+        ggplot(shared_shot_location,
                aes(x = x, y = y, label = label)) +
           annotate_pitch(dimensions = pitch_international,
                          colour = "white",
@@ -492,7 +496,7 @@ shiny::shinyApp(
       )
       
       xGOT_chart <- ggplotly(
-        ggplot(shot_location_data()) +
+        ggplot(shared_shot_location) +
           xlim(c(-2, 4)) +
           ylim(c(-0.3, 1)) + 
           theme_void() + 
@@ -500,12 +504,11 @@ shiny::shinyApp(
           geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
           geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
           geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0)) +
-          geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y, size = expected_goals_on_target, fill = event_type)) +
-          scale_fill_manual(values = brewer.pal(length(unique(shot_location_data()$data()$event_type)), "Set3"))
+          geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y, size = expected_goals_on_target, fill = event_type))
+          # scale_fill_manual(values = brewer.pal(length(unique(shot_location_data()$data()$event_type)), "Set3"))
       ) 
       
       plotly::subplot(shot_locations_chart, xGOT_chart) %>% 
-        hide_legend() %>% 
         highlight(on = "plotly_hover", off = 'plotly_doubleclick')
       
       
