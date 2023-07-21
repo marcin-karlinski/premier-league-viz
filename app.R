@@ -166,13 +166,13 @@ shiny::shinyApp(
     nav_spacer(),
     nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/rstudio/shiny", target = "_blank"))
   ),
-  server = function(input, output) {
+  
+  server = function(input, output, session) {
   
     
     output$rct_main_table <- renderReactable({
       
       reactable(
-        defaultExpanded = TRUE,
         premier_league_table,
         pagination = FALSE,
         showSortable = TRUE,
@@ -511,8 +511,7 @@ shiny::shinyApp(
       plotly::subplot(shot_locations_chart, xGOT_chart) %>% 
         highlight(on = "plotly_hover", off = 'plotly_doubleclick')
       
-      
-      
     })
+    
     
 })
