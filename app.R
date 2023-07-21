@@ -165,7 +165,7 @@ shiny::shinyApp(
               hr(),
               p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")),
     nav_spacer(),
-    nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/rstudio/shiny", target = "_blank"))
+    nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/marcin-karlinski/premier-league-viz", target = "_blank"))
   ),
   
   server = function(input, output, session) {
@@ -184,6 +184,7 @@ shiny::shinyApp(
           else if (index >= 5 & index < 7) list(background = "#ffe2c9",  borderLeft = "solid #dc8136 3px")
           else if (index == 7) list(background = "#b8fcc1", borderLeft = "solid #66a55c 3px")
           else if (index >= 18) list(background = "#ffaca1", borderLeft = "solid #ca503f 3px")
+          else list(borderLeft = "solid #ffffff 3px")
         },
         details = function(index) {
           
@@ -230,7 +231,7 @@ shiny::shinyApp(
             minWidth = 700,
             cell = function(value) {
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", value))
-              image <- img(src = img_src, style = "height: 24px;", alt = value)
+              image <- img(src = img_src, style = "height: 24px; width: 24px;", alt = value)
               tagList(
                 div(style = "display: inline-block; 
                              margin-left: 0.5rem;
@@ -283,7 +284,7 @@ shiny::shinyApp(
             cell = function(value, index) {
               team <- top_scorers_data[index,]$Squad
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
-              image <- img(src = img_src, style = "height: 24px;", alt = team)
+              image <- img(src = img_src, style = "height: 24px; width: 24px;", alt = team)
               tagList(
                 div(style = "display: inline-block; 
                              margin-left: 0.5rem;
@@ -337,7 +338,7 @@ shiny::shinyApp(
             cell = function(value, index) {
               team <- top_assisters_data[index,]$Squad
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", team))
-              image <- img(src = img_src, style = "height: 24px;", alt = team)
+              image <- img(src = img_src, style = "height: 24px; width: 24px;", alt = team)
               tagList(
                 div(style = "display: inline-block; 
                              margin-left: 0.5rem;
