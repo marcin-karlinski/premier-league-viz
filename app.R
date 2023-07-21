@@ -14,6 +14,7 @@ library(ggsoccer)
 library(plotly)
 library(crosstalk)
 library(RColorBrewer)
+library(htmlwidgets)
 
 options(highcharter.rjson = FALSE)
 
@@ -244,7 +245,12 @@ shiny::shinyApp(
             style = list(fontWeight = "bold")
           )
         )
-      )
+      ) %>% 
+        onRender(c(
+          "function expand_row() {",
+          "    const buttons = document.getElementsByClassName('rt-expander-button')",
+          "    buttons[0].click()",
+          "  }"))
       
     })
     
@@ -512,6 +518,5 @@ shiny::shinyApp(
         highlight(on = "plotly_hover", off = 'plotly_doubleclick')
       
     })
-    
     
 })
