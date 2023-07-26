@@ -165,7 +165,8 @@ shiny::shinyApp(
               hr(),
               p("This application is intended solely for demonstration and showcase purposes. It is not intended for commercial use. Source of the data is Opta (via Fbref.com).")),
     nav_spacer(),
-    nav_item(tags$a(shiny::icon("github"), "Shiny", href = "https://github.com/marcin-karlinski/premier-league-viz", target = "_blank"))
+    nav_item(tags$a(shiny::icon("github"), "Github", href = "https://github.com/marcin-karlinski/premier-league-viz", target = "_blank")),
+    nav_item(tags$a(shiny::icon("twitter"), "Twitter", href = "https://twitter.com/Marcin137", target = "_blank"))
   ),
   
   server = function(input, output, session) {
@@ -177,7 +178,7 @@ shiny::shinyApp(
         premier_league_table,
         pagination = FALSE,
         showSortable = TRUE,
-        # height = "80vh",
+        defaultSortOrder = "desc",
         sortable = TRUE,
         rowStyle = function(index) {
           if (index > 0 & index <= 4) list(background = "#c8dbfa",  borderLeft = "solid #4285F4 3px")
@@ -211,6 +212,7 @@ shiny::shinyApp(
           )
         },
         defaultColDef = colDef(
+          minWidth = 60,
           class = JS("function(rowInfo, column, state) {
                     // Highlight sorted columns
                     for (let i = 0; i < state.sorted.length; i++) {
@@ -223,12 +225,12 @@ shiny::shinyApp(
         columns = list(
           Rk = colDef(
             name = "P.",
-            maxWidth = 40,
+            minWidth = 35,
             align = "center"
           ),
           Squad = colDef(
             name = "Team",
-            minWidth = 700,
+            minWidth =  350,
             cell = function(value) {
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", value))
               image <- img(src = img_src, style = "height: 24px; width: 24px;", alt = value)
@@ -244,20 +246,23 @@ shiny::shinyApp(
           ),
           Pts = colDef(
             style = list(fontWeight = "bold")
+          ),
+          Pts.MP = colDef(
+            show = FALSE
           )
         )
       ) %>% 
-        onRender(c(
-          "function expand_row() {",
-          "    const buttons = document.getElementsByClassName('rt-expander-button')",
-          "    buttons[0].click()",
-          "  }"))
+        onRender(
+          "function expand_row() {
+              const buttons = document.getElementsByClassName('rt-expander-button')
+              buttons[0].click()
+            }")
       
     })
     
     output$rct_top_scorers <- renderReactable({
       
-      top_scorers_data <- prem_2023_player_shooting %>% arrange(-Goals)
+      top_scorers_data <- prem_2023_player_shooting %>% arrange(-Goals) %>% slice(1:20)
       
       reactable(
         top_scorers_data,
@@ -310,7 +315,7 @@ shiny::shinyApp(
     
     output$rct_top_assisters <- renderReactable({
       
-      top_assisters_data <- prem_2023_player_passing %>% arrange(-Assists)
+      top_assisters_data <- prem_2023_player_passing %>% arrange(-Assists) %>% slice(1:20)
       
       reactable(
         showPagination = FALSE,
@@ -319,8 +324,8 @@ shiny::shinyApp(
         pagination = TRUE,
         showPageSizeOptions = FALSE,
         defaultPageSize = 7,
-        showSortable = TRUE,
         sortable = TRUE,
+        defaultSortOrder = "desc",
         defaultColDef = colDef(
           # maxWidth = 80,
           class = JS("function(rowInfo, column, state) {
