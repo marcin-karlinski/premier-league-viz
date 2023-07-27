@@ -38,7 +38,8 @@ cumulative_xG <- readRDS("./data/cumulative_xG.rds")
 cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 cumulative_assists <- readRDS("./data/cumulative_assists.rds")
 cumulative_xA <- readRDS("./data/cumulative_xA.rds")
-xGxA_vs_possesions_fotmob <- readRDS("./data/xGxA_vs_possesions_fotmob.rds")
+# xGxA_vs_possesions_fotmob <- readRDS("./data/xGxA_vs_possesions_fotmob.rds")
+tackles_vs_carries_f3 <- readRDS("tackles_vs_carries_f3.rds")
 match_details <- readRDS("./data/match_details.rds") %>% 
   mutate(across(c(on_goal_shot_x, on_goal_shot_y), ~ifelse(is.na(expected_goals_on_target), NA, .)))
 fotmob_squads <- readRDS("./data/fotmob_squads.rds")
@@ -483,10 +484,12 @@ shiny::shinyApp(
     
     output$hc_threat_vs_regains_per90 <- renderHighchart({
       
-      hc <- xGxA_vs_possesions_fotmob %>% 
-        hchart('scatter', hcaes(y = `Possession won final 3rd per 90`, x = `xG + xA per 90`, group = team_name, color = team_color)) %>% 
+      hc <- tackles_vs_carries_f3 %>% 
+        hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `PrgC_Carries`)) %>% 
+        hc_yAxis(title = list(text = "Attacking 3rd tackles")) %>% 
+        hc_xAxis(title = list(text = "Progressive carries")) %>% 
         hc_tooltip(formatter = JS("function(){
-                            return ('Player: ' + this.point.participant_name + '<br> xG + xA per 90: ' + this.x + '<br> Possessions won final 3rd per 90: ' + this.y)
+                            return ('Player: <b>' + this.point.Player + '</b><br> Progressive carries: <b>' + this.x + '</b><br> Attacking 3rd tackles: <b>' + this.y + '</b>')
                             }")) %>% 
         hc_legend(enabled = FALSE)
       
