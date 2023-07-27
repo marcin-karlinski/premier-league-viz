@@ -430,14 +430,20 @@ standard_over_1000_minutes <- prem_2023_player_standard %>%
 
 saveRDS(standard_over_1000_minutes, "./data/standard_over_1000_minutes.rds")
 
-# offense_tackles <- prem_2023_player_standard %>% 
-#         filter(`Min_Playing Time` > 1000) %>% 
-#         select(Player, `Gls_Per 90 Minutes`, `xG_Per 90 Minutes`, `npxG_Per 90 Minutes`, `npxG+xAG_Per 90 Minutes`, `Ast_Per 90 Minutes`, `xAG_Per 90 Minutes`) %>% 
-#         left_join(prem_2023_player_defense %>% select(Player, `Att 3rd_Tackles`), by = "Player")
-# 
-# 
-# hc <- offense_tackles %>% hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `npxG+xAG_Per 90 Minutes`))
-# hc
+prem_2023_player_possession <- readRDS("./data/prem_2023_player_possession.rds")
+prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
+prem_2023_player_defense <- readRDS("./data/prem_2023_player_defense.rds")
+
+offense_tackles <- prem_2023_player_standard %>%
+        filter(`Min_Playing Time` > 1000) %>%
+        select(Player) %>% 
+        left_join(prem_2023_player_defense %>% select(Player, `Att 3rd_Tackles`), by = "Player") %>% 
+        distinct(Player, .keep_all = TRUE) %>% 
+        left_join(prem_2023_player_possession %>% select(Player, TotDist_Carries, PrgDist_Carries, PrgC_Carries, Final_Third_Carries), by = "Player")
+
+saveRDS(offense_tackles, "tackles_vs_carries_f3.rds")
+hc <- offense_tackles %>% hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `PrgC_Carries`))
+hc
 
 fotmob_2023 <- fotmob_get_season_stats(
   country = "ENG",
