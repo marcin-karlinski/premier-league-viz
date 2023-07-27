@@ -15,8 +15,7 @@ library(plotly)
 library(crosstalk)
 library(RColorBrewer)
 library(htmlwidgets)
-
-options(highcharter.rjson = FALSE)
+library(glue)
 
 premier_league_table <- readRDS("./data/premier_league_table.rds") %>% 
   select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
@@ -230,7 +229,7 @@ shiny::shinyApp(
           ),
           Squad = colDef(
             name = "Team",
-            minWidth =  350,
+            minWidth =  400,
             cell = function(value) {
               img_src <- knitr::image_uri(sprintf("./www/images/%s.svg", value))
               image <- img(src = img_src, style = "height: 24px; width: 24px;", alt = value)
@@ -437,6 +436,14 @@ shiny::shinyApp(
     
     output$hc_scoring_per90 <- renderHighchart({
       
+      selected_stat <- switch(input$goals_metrics_per90_select,
+                             "Gls_Per 90 Minutes" = "Goals per 90", 
+                             "xG_Per 90 Minutes" = "xG per 90", 
+                             "npxG_Per 90 Minutes" = "npxG per 90", 
+                             "Ast_Per 90 Minutes" = "Assists per 90",  
+                             "xAG_Per 90 Minutes" = "xA per 90", 
+                             "npxG+xAG_Per 90 Minutes" = "npxG+xA per 90")
+      
       if(input$goals_metrics_per90_select == "npxG+xAG_Per 90 Minutes"){
         
         hc_data <- standard_over_1000_minutes %>%
@@ -446,7 +453,10 @@ shiny::shinyApp(
         hc <- highchart() %>% 
           hc_chart(type = "bar") %>%
           hc_plotOptions(bar = list(stacking = "normal")) %>%
-          hc_xAxis(categories = hc_data$Player) %>%
+          hc_yAxis(title = list(text = selected_stat)) %>% 
+          hc_xAxis(labels = list(style = list(fontWeight = "bold")),
+                   title = list(text = ""),
+                   categories = hc_data$Player) %>% 
           hc_add_series(name="xA",
                         data = hc_data$`xAG_Per 90 Minutes`) %>%
           hc_add_series(name="npxG",
@@ -457,7 +467,12 @@ shiny::shinyApp(
         hc <- standard_over_1000_minutes %>%
           arrange(-.data[[input$goals_metrics_per90_select]]) %>% 
           slice(1:10) %>% 
-          hchart('bar', hcaes(x = Player, y = .data[[input$goals_metrics_per90_select]]))
+          hchart('bar', hcaes(x = Player, y = .data[[input$goals_metrics_per90_select]])) %>% 
+          hc_yAxis(title = list(text = selected_stat)) %>% 
+          hc_xAxis(labels = list(style = list(fontWeight = "bold")),
+                   title = list(text = "")) %>% 
+          hc_tooltip(formatter = JS(glue("function(){return ('Player: <b>' + this.point.name + '</b><br> {{selected_stat}: <b>' + this.y + '</b>')
+                            }", .open = "{{")))
         
       }
 
