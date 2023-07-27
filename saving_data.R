@@ -439,7 +439,7 @@ offense_tackles <- prem_2023_player_standard %>%
         select(Player) %>% 
         left_join(prem_2023_player_defense %>% select(Player, `Att 3rd_Tackles`), by = "Player") %>% 
         distinct(Player, .keep_all = TRUE) %>% 
-        left_join(prem_2023_player_possession %>% select(Player, TotDist_Carries, PrgDist_Carries, PrgC_Carries, Final_Third_Carries), by = "Player")
+        left_join(prem_2023_player_possession %>% select(Player, Carries_Carries, TotDist_Carries, PrgDist_Carries, PrgC_Carries, Final_Third_Carries), by = "Player")
 
 saveRDS(offense_tackles, "tackles_vs_carries_f3.rds")
 hc <- offense_tackles %>% hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `PrgC_Carries`))

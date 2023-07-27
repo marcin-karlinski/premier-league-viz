@@ -106,7 +106,19 @@ shiny::shinyApp(
                   card(
                     full_screen = TRUE,
                     min_height = "80vh",
-                    card_header("Threat vs regains per 90 minutes"),
+                    card_header(div("Final 3rd Tackles vs Carries",
+                                div(
+                                  selectizeInput(
+                                    inputId = "tackles_vs_carries_select",
+                                    label = "",
+                                    choices = c("Carries" = "Carries_Carries", 
+                                                "Carrying distance" = "TotDist_Carries", 
+                                                "Progressive carrying distance" = "PrgDist_Carries", 
+                                                "Progressive carries" = "PrgC_Carries",  
+                                                "Carries into final 3rd" = "Final_Third_Carries"),
+                                    selected = "Progressive carries"), 
+                                    style = "float:right;margin-top:-25px;"), 
+                                style =  "display:inline-block;width:100%;")),
                     highchartOutput("hc_threat_vs_regains_per90")),
                 )
               ),
@@ -484,13 +496,20 @@ shiny::shinyApp(
     
     output$hc_threat_vs_regains_per90 <- renderHighchart({
       
+      selected_stat <- switch(input$tackles_vs_carries_select,
+                              "Carries_Carries" = "Carries", 
+                              "TotDist_Carries" = "Carrying distance", 
+                              "PrgDist_Carries" = "Progressive carrying distance", 
+                              "PrgC_Carries" = "Progressive carries",  
+                              "Final_Third_Carries" = "Carries into final 3rd")
+      
       hc <- tackles_vs_carries_f3 %>% 
-        hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `PrgC_Carries`)) %>% 
+        hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = .data[[input$tackles_vs_carries_select]])) %>% 
         hc_yAxis(title = list(text = "Attacking 3rd tackles")) %>% 
-        hc_xAxis(title = list(text = "Progressive carries")) %>% 
-        hc_tooltip(formatter = JS("function(){
-                            return ('Player: <b>' + this.point.Player + '</b><br> Progressive carries: <b>' + this.x + '</b><br> Attacking 3rd tackles: <b>' + this.y + '</b>')
-                            }")) %>% 
+        hc_xAxis(title = list(text = selected_stat)) %>% 
+        hc_tooltip(formatter = JS(glue("function(){
+                            return ('Player: <b>' + this.point.Player + '</b><br> {{selected_stat}: <b>' + this.x + '</b><br> Attacking 3rd tackles: <b>' + this.y + '</b>')
+                            }", .open = "{{"))) %>% 
         hc_legend(enabled = FALSE)
       
       hc
