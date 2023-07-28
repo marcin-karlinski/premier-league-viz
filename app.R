@@ -17,6 +17,36 @@ library(RColorBrewer)
 library(htmlwidgets)
 library(glue)
 
+bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
+  bar <- div(style = list(background = fill, width = width, height = height))
+  chart <- div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
+  div(style = list(display = "flex", alignItems = "center", fontWeight = "bold"), label, chart)
+}
+
+add_colors <- function(x) { 
+  x %>%       
+    mutate(team_name = case_when(
+      team_color == "#000000" ~ "Fulham",
+      team_color == "#00019E" ~ "Everton",
+      team_color == "#004A97" ~ "Crystal Palace",
+      team_color == "#0060A0" ~ "Leeds",
+      team_color == "#064b95" ~ "Chelsea",
+      team_color == "#0850A0" ~ "Brighton",
+      team_color == "#0d47a1" ~ "Leicester",
+      team_color == "#132257" ~ "Spurs",
+      team_color == "#66192C" ~ "West Ham",
+      team_color == "#69A8D8" ~ "Manchester city",
+      team_color == "#73103c" ~ "Aston Villa",
+      team_color == "#aa001a" ~ "Nott'ham Forest",
+      team_color == "#aa1818" ~ "Bournemouth",
+      team_color == "#bd0510" ~ "Arsenal",
+      team_color == "#C00808" ~ "Brentford",
+      team_color == "#C70101" ~ "Manchester United",
+      team_color == "#d3171e" ~ "Liverpool",
+      team_color == "#d71920" ~ "Southampton",
+      team_color == "#d99b00" ~ "Wolves"))
+}
+
 premier_league_table <- readRDS("./data/premier_league_table.rds") %>% 
   select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
 
@@ -44,12 +74,11 @@ match_details <- readRDS("./data/match_details.rds") %>%
   mutate(across(c(on_goal_shot_x, on_goal_shot_y), ~ifelse(is.na(expected_goals_on_target), NA, .)))
 fotmob_squads <- readRDS("./data/fotmob_squads.rds")
 
-
-bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", background = NULL) {
-  bar <- div(style = list(background = fill, width = width, height = height))
-  chart <- div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
-  div(style = list(display = "flex", alignItems = "center", fontWeight = "bold"), label, chart)
-}
+cumulative_goals <- add_colors(cumulative_goals)
+cumulative_assists <- add_colors(cumulative_assists)
+cumulative_xA <- add_colors(cumulative_xA)
+cumulative_npxG <- add_colors(cumulative_npxG)
+cumulative_xG <- add_colors(cumulative_xG)
 
 shiny::shinyApp(
   ui = page_navbar(
@@ -504,7 +533,7 @@ shiny::shinyApp(
                               "Final_Third_Carries" = "Carries into final 3rd")
       
       hc <- tackles_vs_carries_f3 %>% 
-        hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = .data[[input$tackles_vs_carries_select]])) %>% 
+        hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = .data[[input$tackles_vs_carries_select]], group = Squad, color = team_color)) %>% 
         hc_yAxis(title = list(text = "Attacking 3rd tackles")) %>% 
         hc_xAxis(title = list(text = selected_stat)) %>% 
         hc_tooltip(formatter = JS(glue("function(){
