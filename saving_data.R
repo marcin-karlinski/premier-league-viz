@@ -295,8 +295,6 @@ radar_data <- prem_2023_player_standard %>%
 radar_shooting_standard <- prem_2023_player_shooting %>% 
   select(Player, npxG_per_Sh_Expected, )
 
-
-
 ##Cumulative assists
 #Extracting goal logs for cumulative goals by GW chart
 eng_2023_goal_logs <- readRDS("./data/eng_2023_goal_logs.rds")
@@ -436,10 +434,31 @@ prem_2023_player_defense <- readRDS("./data/prem_2023_player_defense.rds")
 
 offense_tackles <- prem_2023_player_standard %>%
         filter(`Min_Playing Time` > 1000) %>%
-        select(Player) %>% 
+        select(Player, Squad) %>% 
         left_join(prem_2023_player_defense %>% select(Player, `Att 3rd_Tackles`), by = "Player") %>% 
         distinct(Player, .keep_all = TRUE) %>% 
-        left_join(prem_2023_player_possession %>% select(Player, Carries_Carries, TotDist_Carries, PrgDist_Carries, PrgC_Carries, Final_Third_Carries), by = "Player")
+        left_join(prem_2023_player_possession %>% select(Player, Carries_Carries, TotDist_Carries, PrgDist_Carries, PrgC_Carries, Final_Third_Carries), by = "Player") %>% 
+  mutate(team_color = case_when(
+    Squad == "Fulham" ~ "#000000",
+    Squad == "Newcastle Utd" ~ "#1f1f1f",
+    Squad == "Everton" ~ "#00019E",
+    Squad == "Crystal Palace" ~ "#004A97",
+    Squad == "Leeds United" ~ "#0060A0",
+    Squad == "Chelsea" ~ "#064b95",
+    Squad == "Brighton" ~ "#0850A0",
+    Squad ==  "Leicester City" ~ "#0d47a1",
+    Squad == "Tottenham" ~ "#132257",
+    Squad == "West Ham" ~ "#66192C",
+    Squad == "Manchester City" ~ "#69A8D8",
+    Squad == "Aston Villa" ~ "#73103c",
+    Squad == "Nott'ham Forest" ~ "#aa001a",
+    Squad == "Bournemouth" ~ "#aa1818",
+    Squad == "Arsenal" ~ "#bd0510",
+    Squad == "Brentford" ~ "#C00808",
+    Squad == "Manchester Utd" ~ "#C70101",
+    Squad == "Liverpool" ~ "#d3171e",
+    Squad == "Southampton" ~ "#d71920" ,
+    Squad == "Wolves" ~ "#d99b00"))
 
 saveRDS(offense_tackles, "tackles_vs_carries_f3.rds")
 hc <- offense_tackles %>% hchart('scatter', hcaes(y = `Att 3rd_Tackles`, x = `PrgC_Carries`))
@@ -458,3 +477,30 @@ xGxA_vs_possesions_fotmob <- fotmob_2023 %>%
   pivot_wider(id_cols = c(participant_name, team_name, team_color), names_from = stat_name, values_from = stat_value)
 
 saveRDS(xGxA_vs_possesions_fotmob, "xGxA_vs_possesions_fotmob.rds")
+
+prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
+
+fbref_players_dict <- prem_2023_player_standard %>% 
+  distinct(Player, Squad) %>% 
+  mutate(team_color = case_when(
+    Squad == "Fulham" ~ "#000000",
+    Squad == "Newcastle Utd" ~ "#1f1f1f",
+    Squad == "Everton" ~ "#00019E",
+    Squad == "Crystal Palace" ~ "#004A97",
+    Squad == "Leeds United" ~ "#0060A0",
+    Squad == "Chelsea" ~ "#064b95",
+    Squad == "Brighton" ~ "#0850A0",
+    Squad ==  "Leicester City" ~ "#0d47a1",
+    Squad == "Tottenham" ~ "#132257",
+    Squad == "West Ham" ~ "#66192C",
+    Squad == "Manchester City" ~ "#69A8D8",
+    Squad == "Aston Villa" ~ "#73103c",
+    Squad == "Nott'ham Forest" ~ "#aa001a",
+    Squad == "Bournemouth" ~ "#aa1818",
+    Squad == "Arsenal" ~ "#bd0510",
+    Squad == "Brentford" ~ "#C00808",
+    Squad == "Manchester Utd" ~ "#C70101",
+    Squad == "Liverpool" ~ "#d3171e",
+    Squad == "Southampton" ~ "#d71920" ,
+    Squad == "Wolves" ~ "#d99b00"))
+
