@@ -12,7 +12,6 @@ library(shinycssloaders)
 library(ggplot2)
 library(ggsoccer)
 library(plotly)
-library(crosstalk)
 library(RColorBrewer)
 library(htmlwidgets)
 library(glue)
@@ -173,7 +172,8 @@ shiny::shinyApp(
                      options = list( `live-search` = TRUE),
                    ),
                    min_height = "60vh",
-                  plotlyOutput("shot_location_plot")
+                  plotlyOutput("shot_location_plot"),
+                  plotlyOutput("shot_location_plot2")
                  )
                )
              ),
@@ -412,12 +412,10 @@ shiny::shinyApp(
       }
       
       xseries <- plot_data %>% 
-        # use `name` to name  series according the value of `cat` avariable
         rename(name = Player,
                color = team_color) %>%
         group_by(name, color) %>% 
         do(data = list_parse2(.)) %>%
-        # add type of series
         mutate(type = "line")
       
       highchart2() %>% 
@@ -445,12 +443,10 @@ shiny::shinyApp(
       }
       
       xseries <- plot_data %>% 
-        # use `name` to name  series according the value of `cat` avariable
         rename(name = Player,
                color = team_color) %>%
         group_by(name, color) %>% 
         do(data = list_parse2(.)) %>%
-        # add type of series
         mutate(type = "line")
       
       highchart2() %>% 
@@ -530,23 +526,22 @@ shiny::shinyApp(
     
     shot_location_data <- reactive({
       
-      match_details %>% 
-        filter(player_name == input$shot_location_player_select) %>% 
-        mutate(event_id = row_number())
+      highlight_key(
+        match_details %>% 
+          filter(player_name == input$shot_location_player_select) %>% 
+          mutate(event_id = row_number())
+      )
       
     })
-    
-    shared_shot_location <- SharedData$new(shot_location_data, key = ~event_id)
     
     output$shot_location_plot <- renderPlotly({
       
       shot_locations_chart <- ggplotly(
-        ggplot(shared_shot_location,
+        ggplot(shot_location_data(),
                aes(x = x, y = y, label = label)) +
           annotate_pitch(dimensions = pitch_international,
                          colour = "white",
                          fill = "#3ab54a") +
-          # geom_point(aes(x = x, y = y, fill = shot_type, shape = event_type, size = expected_goals)) +
           coord_flip(xlim = c(49, 110))+ 
           scale_y_reverse() +
           theme_pitch() +
@@ -554,10 +549,15 @@ shiny::shinyApp(
                 legend.position = c(50, 50)) +
           # scale_fill_manual(values = brewer.pal(4, "Set3")) +
           geom_text(family="EmojiOne", size=6)
-      )
+      ) %>% highlight(on = "plotly_hover", off = 'plotly_doubleclick')
       
+      shot_locations_chart
+      
+    })
+    
+    output$shot_location_plot2 <- renderPlotly({
       xGOT_chart <- ggplotly(
-        ggplot(shared_shot_location) +
+        ggplot(shot_location_data()) +
           xlim(c(-2, 4)) +
           ylim(c(-0.3, 1)) + 
           theme_void() + 
@@ -566,11 +566,9 @@ shiny::shinyApp(
           geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
           geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0)) +
           geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y, size = expected_goals_on_target, fill = event_type))
-          # scale_fill_manual(values = brewer.pal(length(unique(shot_location_data()$data()$event_type)), "Set3"))
-      ) 
+      ) %>% highlight(on = "plotly_hover", off = 'plotly_doubleclick')
       
-      plotly::subplot(shot_locations_chart, xGOT_chart) %>% 
-        highlight(on = "plotly_hover", off = 'plotly_doubleclick')
+      xGOT_chart
       
     })
     
