@@ -481,7 +481,8 @@ saveRDS(xGxA_vs_possesions_fotmob, "xGxA_vs_possesions_fotmob.rds")
 prem_2023_player_standard <- readRDS("./data/prem_2023_player_standard.rds")
 
 fbref_players_dict <- prem_2023_player_standard %>% 
-  distinct(Player, Squad) %>% 
+  select(Player, Squad) %>% 
+  distinct(Player, .keep_all = TRUE) %>% 
   mutate(team_color = case_when(
     Squad == "Fulham" ~ "#000000",
     Squad == "Newcastle Utd" ~ "#1f1f1f",
@@ -504,3 +505,5 @@ fbref_players_dict <- prem_2023_player_standard %>%
     Squad == "Southampton" ~ "#d71920" ,
     Squad == "Wolves" ~ "#d99b00"))
 
+
+saveRDS(fbref_players_dict, "./data/fbref_players_dict.rds")

@@ -23,29 +23,7 @@ bar_chart <- function(label, width = "100%", height = "1rem", fill = "#00bfc4", 
   div(style = list(display = "flex", alignItems = "center", fontWeight = "bold"), label, chart)
 }
 
-add_colors <- function(x) { 
-  x %>%       
-    mutate(team_name = case_when(
-      team_color == "#000000" ~ "Fulham",
-      team_color == "#00019E" ~ "Everton",
-      team_color == "#004A97" ~ "Crystal Palace",
-      team_color == "#0060A0" ~ "Leeds",
-      team_color == "#064b95" ~ "Chelsea",
-      team_color == "#0850A0" ~ "Brighton",
-      team_color == "#0d47a1" ~ "Leicester",
-      team_color == "#132257" ~ "Spurs",
-      team_color == "#66192C" ~ "West Ham",
-      team_color == "#69A8D8" ~ "Manchester city",
-      team_color == "#73103c" ~ "Aston Villa",
-      team_color == "#aa001a" ~ "Nott'ham Forest",
-      team_color == "#aa1818" ~ "Bournemouth",
-      team_color == "#bd0510" ~ "Arsenal",
-      team_color == "#C00808" ~ "Brentford",
-      team_color == "#C70101" ~ "Manchester United",
-      team_color == "#d3171e" ~ "Liverpool",
-      team_color == "#d71920" ~ "Southampton",
-      team_color == "#d99b00" ~ "Wolves"))
-}
+fbref_players_dict <- readRDS("./data/fbref_players_dict.rds")
 
 premier_league_table <- readRDS("./data/premier_league_table.rds") %>% 
   select(Rk, Squad, W, D, L, GF, GA, GD, xG, xGA, xGD, Pts.MP, Pts)
@@ -69,16 +47,16 @@ cumulative_npxG <- readRDS("./data/cumulative_npxG.rds")
 cumulative_assists <- readRDS("./data/cumulative_assists.rds")
 cumulative_xA <- readRDS("./data/cumulative_xA.rds")
 # xGxA_vs_possesions_fotmob <- readRDS("./data/xGxA_vs_possesions_fotmob.rds")
-tackles_vs_carries_f3 <- readRDS("tackles_vs_carries_f3.rds")
+tackles_vs_carries_f3 <- readRDS("./data/tackles_vs_carries_f3.rds")
 match_details <- readRDS("./data/match_details.rds") %>% 
   mutate(across(c(on_goal_shot_x, on_goal_shot_y), ~ifelse(is.na(expected_goals_on_target), NA, .)))
 fotmob_squads <- readRDS("./data/fotmob_squads.rds")
 
-cumulative_goals <- add_colors(cumulative_goals)
-cumulative_assists <- add_colors(cumulative_assists)
-cumulative_xA <- add_colors(cumulative_xA)
-cumulative_npxG <- add_colors(cumulative_npxG)
-cumulative_xG <- add_colors(cumulative_xG)
+cumulative_goals <- cumulative_goals %>% left_join(fbref_players_dict, by = "Player")
+cumulative_assists <- cumulative_assists %>% left_join(fbref_players_dict, by = "Player")
+cumulative_xA <- cumulative_xA %>% left_join(fbref_players_dict, by = "Player")
+cumulative_npxG <- cumulative_npxG %>% left_join(fbref_players_dict, by = "Player")
+cumulative_xG <- cumulative_xG %>% left_join(fbref_players_dict, by = "Player")
 
 shiny::shinyApp(
   ui = page_navbar(
@@ -413,34 +391,37 @@ shiny::shinyApp(
       if(input$goals_metrics_by_GW_select == "Goals"){
         plot_data <- cumulative_goals %>% 
           mutate(Goals = as.numeric(Goals)) %>% 
-          group_by(Player, time_value) %>% 
+          group_by(Player, team_color, time_value) %>% 
           summarize(Goals = max(Goals)) %>% 
-          ungroup()
+          ungroup() %>% 
+          select(Player, Goals, team_color)
       } else if(input$goals_metrics_by_GW_select == "xG"){
         plot_data <- cumulative_xG %>% 
           mutate(xG = as.numeric(xG)) %>% 
-          group_by(Player, time_value) %>% 
+          group_by(Player, team_color, time_value) %>% 
           summarize(xG = max(xG)) %>% 
-          ungroup()
+          ungroup() %>% 
+          select(Player, xG, team_color)
       } else if(input$goals_metrics_by_GW_select == "npxG") {
         plot_data <- cumulative_npxG %>% 
           mutate(npxG = as.numeric(npxG)) %>% 
-          group_by(Player, time_value) %>% 
+          group_by(Player, team_color, time_value) %>% 
           summarize(npxG = max(npxG)) %>% 
-          ungroup() 
+          ungroup() %>% 
+          select(Player, npxG, team_color)
       }
       
       xseries <- plot_data %>% 
-        select(-time_value) %>%
         # use `name` to name  series according the value of `cat` avariable
-        rename(name = Player) %>%
-        group_by(name) %>% 
+        rename(name = Player,
+               color = team_color) %>%
+        group_by(name, color) %>% 
         do(data = list_parse2(.)) %>%
         # add type of series
         mutate(type = "line")
       
       highchart2() %>% 
-        hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
+        # hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
         hc_add_series_list(xseries)
     
   })
@@ -450,28 +431,30 @@ shiny::shinyApp(
       if(input$assists_metrics_by_GW_select == "Assists"){
         plot_data <- cumulative_assists %>% 
           mutate(Assists = as.numeric(Assists)) %>% 
-          group_by(Player, time_value) %>% 
+          group_by(Player, time_value, team_color) %>% 
           summarize(Assists = max(Assists)) %>% 
-          ungroup()
+          ungroup() %>% 
+          select(Player, Assists, team_color)
       } else if(input$assists_metrics_by_GW_select == "xA"){
         plot_data <- cumulative_xA %>% 
           mutate(xA = as.numeric(xA)) %>% 
-          group_by(Player, time_value) %>% 
+          group_by(Player, time_value, team_color) %>% 
           summarize(xA = max(xA)) %>% 
-          ungroup()
+          ungroup() %>% 
+          select(Player, xA, team_color)
       }
       
       xseries <- plot_data %>% 
-        select(-time_value) %>%
         # use `name` to name  series according the value of `cat` avariable
-        rename(name = Player) %>%
-        group_by(name) %>% 
+        rename(name = Player,
+               color = team_color) %>%
+        group_by(name, color) %>% 
         do(data = list_parse2(.)) %>%
         # add type of series
         mutate(type = "line")
       
       highchart2() %>% 
-        hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
+        # hc_plotOptions(series = list(marker = list(enabled = FALSE))) %>%
         hc_add_series_list(xseries)
       
     })
