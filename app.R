@@ -526,49 +526,55 @@ shiny::shinyApp(
     
     shot_location_data <- reactive({
       
-      highlight_key(
         match_details %>% 
           filter(player_name == input$shot_location_player_select) %>% 
-          mutate(event_id = row_number())
-      )
+          mutate(event_id = as.character(row_number()))
       
     })
     
+    highlight_data <- highlight_key(shot_location_data, key = ~event_id)
+    
     output$shot_location_plot <- renderPlotly({
       
-      shot_locations_chart <- ggplotly(
-        ggplot(shot_location_data(),
-               aes(x = x, y = y, label = label)) +
+      print(highlight_data$data()$event_id)
+      
+      shot_locations_chart <- highlight_data %>%
+        ggplot(aes(x = x, y = y, label = label)) +
           annotate_pitch(dimensions = pitch_international,
                          colour = "white",
                          fill = "#3ab54a") +
-          coord_flip(xlim = c(49, 110))+ 
+          coord_flip(xlim = c(49, 110))+
           scale_y_reverse() +
           theme_pitch() +
           theme(panel.background = element_rect(fill = "#3ab54a"),
                 legend.position = c(50, 50)) +
           # scale_fill_manual(values = brewer.pal(4, "Set3")) +
           geom_text(family="EmojiOne", size=6)
-      ) %>% highlight(on = "plotly_hover", off = 'plotly_doubleclick')
-      
-      shot_locations_chart
+
+      shot_locations_chart %>%
+        ggplotly() %>%
+        # style(hoverinfo = "none", traces = c(0:20)) %>% 
+        highlight(on = "plotly_hover", off = 'plotly_doubleclick', debounce = 10)
       
     })
     
     output$shot_location_plot2 <- renderPlotly({
-      xGOT_chart <- ggplotly(
-        ggplot(shot_location_data()) +
+      
+      xGOT_chart <- highlight_data %>%
+        ggplot() +
           xlim(c(-2, 4)) +
-          ylim(c(-0.3, 1)) + 
-          theme_void() + 
+          ylim(c(-0.3, 1)) +
+          theme_void() +
           geom_segment(aes(x = 0, y = 0, xend = 0, yend = 0.67), colour = "gray", linewidth = 3) +
           geom_segment(aes(x = -0.02, y = 0.67, xend = 2.02, yend = 0.67), colour = "gray", linewidth = 2.5) +
           geom_segment(aes(x = 2, y = 0, xend = 2, yend = 0.67), colour = "gray", linewidth = 3) +
           geom_segment(aes(x = -2, y = 0, xend = 4, yend = 0)) +
           geom_point(aes(x = on_goal_shot_x, y = on_goal_shot_y, size = expected_goals_on_target, fill = event_type))
-      ) %>% highlight(on = "plotly_hover", off = 'plotly_doubleclick')
-      
-      xGOT_chart
+
+    xGOT_chart %>%
+      ggplotly() %>%
+      # style(hoverinfo = "none", traces = c(0:6)) %>% 
+      highlight(on = "plotly_hover", off = 'plotly_doubleclick', debounce = 10)
       
     })
     
